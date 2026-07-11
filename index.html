@@ -44,6 +44,11 @@
   }
   .headertext h1{ font-size:18px; margin:0 0 2px; font-weight:700; }
   .headertext .sub{ font-size:11px; color:var(--dim); font-family:'Courier New',monospace; letter-spacing:0.5px; }
+  .headertext{ flex:1; min-width:0; }
+  .helpbtn{
+    background:var(--card); border:1px solid var(--line); color:var(--gasflag);
+    width:38px; height:38px; border-radius:10px; font-size:16px; font-weight:800; flex:0 0 auto; line-height:1;
+  }
 
   .menupanel{
     display:none; flex-direction:column; position:fixed; top:76px; left:16px;
@@ -162,6 +167,36 @@
   .copybtn{ flex:1; background:#1c1f22; color:var(--gasflag); border:none; padding:13px; border-radius:10px; font-size:14px; font-weight:700; }
   .copybtn.done{ color:#5fd66b; }
   .clearbtn{ background:none; border:1px solid #6b6456; color:#6b6456; padding:13px 16px; border-radius:10px; font-size:13px; }
+
+  .help-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:50;
+    display:none; align-items:flex-end; justify-content:center;
+  }
+  .help-panel{
+    background:var(--asphalt); width:100%; max-height:85vh; border-radius:18px 18px 0 0;
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  .help-panel-head{
+    display:flex; align-items:center; padding:14px 8px; border-bottom:1px solid var(--line); flex:0 0 auto;
+  }
+  .help-panel-title{ font-size:15px; font-weight:700; flex:1; text-align:center; }
+  .help-back, .help-close{ background:none; border:none; color:var(--ink); font-size:14px; padding:8px 10px; flex:0 0 auto; min-width:44px; }
+  .help-close{ font-size:22px; line-height:1; }
+  .help-panel-body{ padding:16px; overflow-y:auto; }
+  .help-menu-item{
+    width:100%; text-align:left; background:var(--card); border:1px solid var(--line); color:var(--ink);
+    padding:14px 16px; border-radius:12px; margin-bottom:10px; font-size:14px; font-weight:600;
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .help-menu-item .arrow{ color:var(--dim); font-weight:400; }
+  .help-text{ font-size:13.5px; line-height:1.7; color:var(--ink); }
+  .help-text h4{ font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--gasflag); margin:16px 0 6px; }
+  .help-text h4:first-child{ margin-top:0; }
+  .help-text p{ margin:0 0 10px; }
+  .help-report{
+    display:block; text-align:center; margin-top:10px; padding:12px; border-radius:12px;
+    background:none; border:1px dashed var(--line); color:var(--dim); font-size:13px; text-decoration:none;
+  }
 </style>
 </head>
 <body>
@@ -173,6 +208,7 @@
       <h1 id="pageTitle">Note Builder</h1>
       <div class="sub" id="pageSub">TAP SIZES → MULTI-SELECT → COPY</div>
     </div>
+    <button class="helpbtn" id="helpBtn">?</button>
   </div>
 </header>
 
@@ -180,6 +216,17 @@
   <button class="menuitem" data-tab="builder">Note Builder</button>
   <button class="menuitem" data-tab="quickcopy">Quick Copy</button>
   <button class="menuitem" data-tab="projecthouses">Project Houses</button>
+</div>
+
+<div class="help-overlay" id="helpOverlay">
+  <div class="help-panel">
+    <div class="help-panel-head">
+      <button class="help-back" id="helpBackBtn" style="display:none;">‹ Back</button>
+      <div class="help-panel-title" id="helpPanelTitle">Help</div>
+      <button class="help-close" id="helpCloseBtn">×</button>
+    </div>
+    <div class="help-panel-body" id="helpPanelBody"></div>
+  </div>
 </div>
 
 <main id="builderView">
@@ -279,6 +326,11 @@
         <button class="copybtn" id="phCopyBtn">Copy hookup list</button>
         <button class="clearbtn" id="phClearBtn">Clear list</button>
       </div>
+      <div class="block-label" style="margin-top:6px;">Combined with Note Builder</div>
+      <div id="phMergedPreview" class="ph-preview">Select houses above to build a combined note.</div>
+      <div class="footer-row" style="padding-bottom:4px;">
+        <button class="copybtn" id="phMergedCopyBtn">Copy combined note</button>
+      </div>
     </div>
   </div>
 </main>
@@ -296,12 +348,12 @@
 const VERB = "Marked";
 const SIZES = ["1/2\"","3/4\"","1\"","1 1/4\"","2\"","4\"","6\"","8\"","10\"","12\""];
 const MODIFIERS = [
-  {key:'meter', label:'Near meter', noun:'meter', group:'nearby'},
+  {key:'meter', label:'Meter nearby', noun:'meter', group:'nearby'},
   {key:'meterprop', label:'Meter on property', noun:'meter', group:'onproperty'},
-  {key:'riser', label:'Near riser', noun:'riser', group:'nearby'},
-  {key:'testlead', label:'Near testlead', noun:'testlead', group:'nearby'},
-  {key:'tracerwire', label:'Near tracerwire', noun:'tracerwire', group:'nearby'},
-  {key:'regulator', label:'Near regulator', noun:'regulator', group:'nearby'}
+  {key:'riser', label:'Riser nearby', noun:'riser', group:'nearby'},
+  {key:'testlead', label:'Testlead nearby', noun:'testlead', group:'nearby'},
+  {key:'tracerwire', label:'Tracerwire nearby', noun:'tracerwire', group:'nearby'},
+  {key:'regulator', label:'Regulator nearby', noun:'regulator', group:'nearby'}
 ];
 const HP_WARNING = 'Whenever you dig within 5 feet of a high pressure line, you must schedule a "stand by" locator.';
 const DEFAULT_PRESETS = [
@@ -311,6 +363,68 @@ const DEFAULT_PRESETS = [
   'Marked 1/2" poly service line from meter on property.',
   'Marked 3/4" steel service line from meter on property.'
 ];
+
+const GITHUB_ISSUES_URL = 'https://github.com/paytonhussey76-rgb/Gas-Note-Builder/issues';
+
+const HELP_CONTENT = {
+  notebuilder: `
+    <div class="help-text">
+      <h4>The basics</h4>
+      <p>Tap a pipe size once to add it. Tap it <b>again</b> and it adds an "s" — that means you found more than one of that exact same size. Tap a third time to clear it.</p>
+      <h4>Poly in casing</h4>
+      <p>Poly has its own separate "in casing" section right below regular Poly. That way you can mark a regular poly line <b>and</b> a cased one of the same size at the same time, without them mixing up.</p>
+      <h4>High pressure</h4>
+      <p>Same tap system as everywhere else. Pick any High Pressure size and the note automatically adds the standby locator reminder at the end — you don't have to remember to type it yourself.</p>
+      <h4>Abandoned</h4>
+      <p>Choose Poly or Steel first, then tap sizes — tap again for multiple of that same size, same as everywhere else in the app. It reads like "abandoned 1/2" poly line" (or "lines" if you tapped it twice), and always adds "by measurement" automatically.</p>
+      <h4>Notes</h4>
+      <p>Tap "Meter nearby," "Riser nearby," and so on to add context to your note. Tap it again to mark plural (more than one).</p>
+      <h4>Custom sizes</h4>
+      <p>Type a size that's not listed and hit <b>+</b> to add it. You can remove it later with the <b>×</b> next to it in the list below the box.</p>
+      <h4>Copy note</h4>
+      <p>The note at the bottom updates live as you tap things. Hit <b>Copy note</b> anytime to grab it for pasting into your ticket.</p>
+    </div>`,
+  quickcopy: `
+    <div class="help-text">
+      <h4>The basics</h4>
+      <p>Tap any preset card and it copies straight to your clipboard — nothing else to do, just paste it where you need it.</p>
+      <h4>Adding your own</h4>
+      <p>Don't see the one you need? Type it into the box at the bottom and tap <b>+ Add preset.</b> It'll remember it from then on, even after you close the app.</p>
+      <h4>Removing one</h4>
+      <p>Tap <b>DEL</b> on any preset card you don't want anymore.</p>
+    </div>`,
+  projecthouses: `
+    <div class="help-text">
+      <h4>The basics</h4>
+      <p>Tap <b>Find nearby houses</b> — your phone will ask for location permission the first time, tap Allow.</p>
+      <h4>Streets</h4>
+      <p>Results are grouped by street. Tap a street to open it up and see the house numbers on it. Tap it again to close it.</p>
+      <h4>Selecting houses</h4>
+      <p>Tap a house number to add it to your list. Tap it again to remove it.</p>
+      <h4>Can't find a house?</h4>
+      <p>Type it into the box under "Add manually" — some areas aren't fully mapped online yet, so this always works as a backup.</p>
+      <h4>Copying the list</h4>
+      <p>Your selections build into "Hooked up at ___" automatically. <b>Copy hookup list</b> grabs it, <b>Clear list</b> starts fresh for the next job.</p>
+      <h4>Combining with Note Builder</h4>
+      <p>Below your selected houses is a second box that merges your house list with whatever you've built in Note Builder into one combined note — handy when you want both in a single ticket. Tap <b>Copy combined note</b> to grab it. If Note Builder is still empty, it'll say so instead of leaving it blank.</p>
+    </div>`
+};
+
+const INSTALL_INSTRUCTIONS = {
+  'ios-safari': `<p><b>Step 1.</b> Tap the <b>Share</b> icon (square with an arrow pointing up) at the bottom of the Safari screen.</p><p><b>Step 2.</b> Scroll down the list and tap <b>"Add to Home Screen."</b></p><p><b>Step 3.</b> Tap <b>Add</b> in the top right.</p><p>The app icon now sits on your home screen like any other app.</p>`,
+  'ios-chrome': `<p><b>Step 1.</b> Tap the <b>Share</b> icon at the top of the Chrome screen.</p><p><b>Step 2.</b> Scroll down and tap <b>"Add to Home Screen."</b></p><p><b>Step 3.</b> Tap <b>Add.</b></p><p>If you don't see that option, open the page in Safari instead — it always supports this.</p>`,
+  'ios-other': `<p>Look for the <b>Share</b> icon in your browser (usually a square with an arrow, top or bottom of the screen).</p><p>Tap it, then look for <b>"Add to Home Screen"</b> in the list, tap it, then tap <b>Add.</b></p><p>If your browser doesn't have that option, open the page in <b>Safari</b> instead — it always works.</p>`,
+  'android-chrome': `<p><b>Step 1.</b> Tap the <b>⋮</b> (three dots) in the top right corner.</p><p><b>Step 2.</b> Tap <b>"Add to Home screen"</b> (sometimes shown as <b>"Install app"</b>).</p><p><b>Step 3.</b> Tap <b>Add / Install</b> to confirm.</p>`,
+  'android-samsung': `<p><b>Step 1.</b> Tap the menu icon (usually <b>☰</b> or <b>•••</b>) in Samsung Internet.</p><p><b>Step 2.</b> Look for <b>"Add page to"</b> and tap it.</p><p><b>Step 3.</b> Tap <b>"Home screen."</b></p>`,
+  'android-brave': `<p><b>Step 1.</b> Tap the <b>⋮</b> (three dots) in the top right corner.</p><p><b>Step 2.</b> Tap <b>"Add to Home Screen."</b></p><p><b>Step 3.</b> Confirm by tapping <b>Add.</b></p>`,
+  'android-firefox': `<p><b>Step 1.</b> Tap the <b>⋮</b> (three dots) in the top right corner.</p><p><b>Step 2.</b> Tap <b>"Install"</b> (or <b>"Add to Home screen"</b>).</p><p><b>Step 3.</b> Confirm.</p>`,
+  'android-other': `<p>Look in your browser's menu (usually three dots or lines) for <b>"Add to Home Screen"</b> or <b>"Install app."</b></p><p>If you can't find it, try switching to <b>Chrome</b> — it always supports this.</p>`
+};
+
+let helpOpen = false;
+let helpView = 'menu';
+let helpBrand = null;
+let helpBrowser = null;
 
 let currentTab = 'builder';
 let currentLt = { poly:'service', polyCasing:'service', steel:'service' };
@@ -601,13 +715,15 @@ function renderAbandonedSizeGrid(){
   const grid = document.createElement('div');
   grid.className = 'chipwrap';
   allSizes().forEach(size=>{
-    const on = !!selections.abandoned[currentAbandonedMat][size];
+    const store = selections.abandoned[currentAbandonedMat];
+    const st = store[size];
     const b = document.createElement('button');
-    b.className = 'sizechip' + (on ? ' on abandoned' : '');
-    b.textContent = size;
+    b.className = 'sizechip' + (st ? ' on abandoned' : '');
+    b.innerHTML = size + chipBadges(st);
     b.onclick = ()=>{
-      if(on) delete selections.abandoned[currentAbandonedMat][size];
-      else selections.abandoned[currentAbandonedMat][size] = true;
+      if(!st) store[size] = 'single';
+      else if(st==='single') store[size] = 'multiple';
+      else delete store[size];
       render();
     };
     grid.appendChild(b);
@@ -691,8 +807,10 @@ function buildItems(){
 function buildAbandonedSentence(){
   const items = [];
   ['poly','steel'].forEach(mat=>{
-    Object.keys(selections.abandoned[mat]).forEach(size=>{
-      if(selections.abandoned[mat][size]) items.push(`${size} ${mat}`);
+    Object.entries(selections.abandoned[mat]).forEach(([size,count])=>{
+      if(!count) return;
+      const word = count==='multiple' ? 'lines' : 'line';
+      items.push(`${size} ${mat} ${word}`);
     });
   });
   if(!items.length) return null;
@@ -777,16 +895,21 @@ function renderSelectedHouses(){
   document.getElementById('phCount').textContent = selectedHouses.length ? `(${selectedHouses.length})` : '';
   const sentence = buildHookupSentence();
   document.getElementById('phPreview').textContent = sentence || 'No houses selected yet.';
+  renderMergedPreview();
 }
 
-function renderPreview(){
+function renderMergedPreview(){
+  const merged = buildMergedHookupText();
+  document.getElementById('phMergedPreview').textContent = merged || 'Select houses above to build a combined note.';
+}
+
+function buildNoteBuilderText(){
   const items = buildItems();
   const notePhrases = buildNotesClause();
   if(notePhrases.length){
     if(items.length) items[items.length-1] += ' ' + notePhrases.join(' and ');
     else items.push(notePhrases.join(' and '));
   }
-  const preview = document.getElementById('preview');
   const parts = [];
   if(items.length){
     const joined = items.length===1 ? items[0] : items.slice(0,-1).join(', ') + ' and ' + items[items.length-1];
@@ -794,14 +917,28 @@ function renderPreview(){
   }
   const abandonedSentence = buildAbandonedSentence();
   if(abandonedSentence) parts.push(abandonedSentence);
+  if(!parts.length) return null;
+  let text = parts.join(' ');
+  if(hasHighPressure()) text += ' ' + HP_WARNING;
+  return text;
+}
 
-  if(!parts.length){
-    preview.textContent = VERB + '… (tap sizes above to build your note)';
-  } else {
-    let text = parts.join(' ');
-    if(hasHighPressure()) text += ' ' + HP_WARNING;
-    preview.textContent = text;
+function buildMergedHookupText(){
+  if(!selectedHouses.length) return null;
+  const hookup = buildHookupSentence();
+  const noteText = buildNoteBuilderText();
+  if(!noteText){
+    return hookup + ' Nothing has been added to Note Builder yet.';
   }
+  const hookupNoPeriod = hookup.replace(/\.\s*$/, '');
+  const lowerNote = noteText.charAt(0).toLowerCase() + noteText.slice(1);
+  return `${hookupNoPeriod} and ${lowerNote}`;
+}
+
+function renderPreview(){
+  const preview = document.getElementById('preview');
+  const text = buildNoteBuilderText();
+  preview.textContent = text || (VERB + '… (tap sizes above to build your note)');
 }
 
 function renderQuickCopyList(){
@@ -844,6 +981,74 @@ function renderQuickCopyList(){
   });
 }
 
+function helpGoBack(){
+  if(helpView==='install-browser'){ helpView='install-brand'; }
+  else if(helpView==='install-result'){ helpView='install-browser'; }
+  else { helpView='menu'; }
+  renderHelp();
+}
+
+function renderHelp(){
+  const overlay = document.getElementById('helpOverlay');
+  overlay.style.display = helpOpen ? 'flex' : 'none';
+  if(!helpOpen) return;
+
+  const titleEl = document.getElementById('helpPanelTitle');
+  const backBtn = document.getElementById('helpBackBtn');
+  const body = document.getElementById('helpPanelBody');
+  backBtn.style.display = helpView==='menu' ? 'none' : 'inline-block';
+
+  if(helpView==='menu'){
+    titleEl.textContent = 'Help';
+    body.innerHTML = `
+      <button class="help-menu-item" data-help="notebuilder"><span>📋 Note Builder</span><span class="arrow">›</span></button>
+      <button class="help-menu-item" data-help="quickcopy"><span>⚡ Quick Copy</span><span class="arrow">›</span></button>
+      <button class="help-menu-item" data-help="projecthouses"><span>📍 Project Houses</span><span class="arrow">›</span></button>
+      <button class="help-menu-item" data-help="install-brand"><span>📲 Install as an App</span><span class="arrow">›</span></button>
+      <a class="help-report" href="${GITHUB_ISSUES_URL}" target="_blank" rel="noopener">🐞 Report an issue</a>
+    `;
+    body.querySelectorAll('.help-menu-item').forEach(btn=>{
+      btn.onclick = ()=>{ helpView = btn.dataset.help; renderHelp(); };
+    });
+  } else if(HELP_CONTENT[helpView]){
+    const titles = { notebuilder:'Note Builder', quickcopy:'Quick Copy', projecthouses:'Project Houses' };
+    titleEl.textContent = titles[helpView];
+    body.innerHTML = HELP_CONTENT[helpView];
+  } else if(helpView==='install-brand'){
+    titleEl.textContent = 'Install as an App';
+    body.innerHTML = `
+      <div class="help-text"><p>What kind of phone are you using?</p></div>
+      <button class="help-menu-item" data-brand="iphone"><span>iPhone</span><span class="arrow">›</span></button>
+      <button class="help-menu-item" data-brand="samsung"><span>Samsung</span><span class="arrow">›</span></button>
+      <button class="help-menu-item" data-brand="pixel"><span>Google Pixel</span><span class="arrow">›</span></button>
+      <button class="help-menu-item" data-brand="other-android"><span>Other Android</span><span class="arrow">›</span></button>
+    `;
+    body.querySelectorAll('[data-brand]').forEach(btn=>{
+      btn.onclick = ()=>{ helpBrand = btn.dataset.brand; helpView='install-browser'; renderHelp(); };
+    });
+  } else if(helpView==='install-browser'){
+    titleEl.textContent = 'Install as an App';
+    let options;
+    if(helpBrand==='iphone'){
+      options = [['safari','Safari'],['chrome','Chrome'],['other','Other browser']];
+    } else if(helpBrand==='samsung'){
+      options = [['samsung','Samsung Internet'],['chrome','Chrome'],['brave','Brave'],['firefox','Firefox'],['other','Other browser']];
+    } else {
+      options = [['chrome','Chrome'],['samsung','Samsung Internet'],['brave','Brave'],['firefox','Firefox'],['other','Other browser']];
+    }
+    body.innerHTML = `<div class="help-text"><p>Which browser are you using?</p></div>` +
+      options.map(([key,label])=>`<button class="help-menu-item" data-browser="${key}"><span>${label}</span><span class="arrow">›</span></button>`).join('');
+    body.querySelectorAll('[data-browser]').forEach(btn=>{
+      btn.onclick = ()=>{ helpBrowser = btn.dataset.browser; helpView='install-result'; renderHelp(); };
+    });
+  } else if(helpView==='install-result'){
+    titleEl.textContent = 'Install as an App';
+    const os = helpBrand==='iphone' ? 'ios' : 'android';
+    const key = `${os}-${helpBrowser}`;
+    body.innerHTML = `<div class="help-text">${INSTALL_INSTRUCTIONS[key] || INSTALL_INSTRUCTIONS[os+'-other']}</div>`;
+  }
+}
+
 function render(){
   renderLtRow('polyLt', [['service','Service line'],['mainline','Mainline']], ()=>currentLt.poly, (k)=>{currentLt.poly=k;}, (k)=>countInField(k,'plain'));
   renderPolyFieldGrid('polySizes', currentLt.poly, 'plain');
@@ -882,6 +1087,19 @@ function render(){
 document.getElementById('menuBtn').onclick = ()=>{
   const panel = document.getElementById('menuPanel');
   panel.style.display = panel.style.display==='flex' ? 'none' : 'flex';
+};
+
+document.getElementById('helpBtn').onclick = ()=>{
+  helpOpen = true;
+  helpView = 'menu';
+  helpBrand = null;
+  helpBrowser = null;
+  renderHelp();
+};
+document.getElementById('helpCloseBtn').onclick = ()=>{ helpOpen = false; renderHelp(); };
+document.getElementById('helpBackBtn').onclick = helpGoBack;
+document.getElementById('helpOverlay').onclick = (ev)=>{
+  if(ev.target.id === 'helpOverlay'){ helpOpen = false; renderHelp(); }
 };
 document.querySelectorAll('.menuitem').forEach(el=>{
   el.onclick = ()=>{
@@ -950,6 +1168,25 @@ document.getElementById('phCopyBtn').onclick = async ()=>{
     btn.textContent = 'Long-press to copy';
   }
   setTimeout(()=>{ btn.textContent='Copy hookup list'; btn.classList.remove('done'); }, 1800);
+};
+
+document.getElementById('phMergedCopyBtn').onclick = async ()=>{
+  const preview = document.getElementById('phMergedPreview');
+  const text = preview.textContent;
+  const btn = document.getElementById('phMergedCopyBtn');
+  const ok = await copyTextRobust(text);
+  if(ok){
+    btn.textContent = 'Copied ✓';
+    btn.classList.add('done');
+  } else {
+    const range = document.createRange();
+    range.selectNodeContents(preview);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    btn.textContent = 'Long-press to copy';
+  }
+  setTimeout(()=>{ btn.textContent='Copy combined note'; btn.classList.remove('done'); }, 1800);
 };
 
 document.getElementById('phClearBtn').onclick = async ()=>{
