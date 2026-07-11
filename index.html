@@ -46,9 +46,19 @@
   .headertext .sub{ font-size:11px; color:var(--dim); font-family:'Courier New',monospace; letter-spacing:0.5px; }
   .headertext{ flex:1; min-width:0; }
   .helpbtn{
+    position:relative;
     background:var(--card); border:1px solid var(--line); color:var(--gasflag);
     width:38px; height:38px; border-radius:10px; font-size:16px; font-weight:800; flex:0 0 auto; line-height:1;
   }
+  .helpbtn .badge-dot{
+    position:absolute; top:-3px; right:-3px; width:11px; height:11px; border-radius:50%;
+    background:var(--danger); border:2px solid var(--asphalt); display:none;
+  }
+  .lockbtn{
+    background:var(--card); border:1px solid var(--line); color:var(--dim);
+    width:38px; height:38px; border-radius:10px; font-size:15px; flex:0 0 auto; line-height:1;
+  }
+  .lockbtn.unlocked{ border-color:var(--danger); color:var(--danger); }
 
   .menupanel{
     display:none; flex-direction:column; position:fixed; top:76px; left:16px;
@@ -111,6 +121,7 @@
     padding:6px 8px 6px 12px; font-size:12.5px; color:var(--dim);
   }
   .customsize-item button{ background:none; border:none; color:var(--danger); font-size:15px; line-height:1; padding:2px 4px; }
+  .customsize-item button.confirm{ background:var(--danger); color:#1c1f22; border-radius:6px; padding:3px 7px; font-weight:700; font-size:11px; }
 
   .notewrap{ display:flex; flex-wrap:wrap; gap:7px; }
   .notechip{ border:1px solid var(--line); background:var(--card); color:var(--ink); padding:8px 12px; border-radius:20px; font-size:13px; position:relative; }
@@ -126,6 +137,13 @@
   .qc-hint{ font-size:10px; color:var(--dim); margin-top:8px; text-transform:uppercase; letter-spacing:0.5px; }
   .qc-hint.copied{ color:#5fd66b; }
   .qc-del{ position:absolute; top:8px; right:8px; background:none; border:none; color:var(--danger); font-size:11px; padding:4px 6px; }
+  .qc-del.confirm{ background:var(--danger); color:#1c1f22; border-radius:6px; font-weight:700; padding:5px 8px; }
+  .qc-movewrap{ display:flex; gap:8px; margin-bottom:10px; }
+  .qc-move{
+    background:var(--card); border:1px solid var(--gasflag); color:var(--gasflag);
+    padding:6px 12px; border-radius:8px; font-size:12px; font-weight:600;
+  }
+  .qc-move:disabled{ opacity:0.3; border-color:var(--line); color:var(--dim); }
   .qc-add{ margin-top:6px; }
   .qc-add textarea{
     width:100%; min-height:70px; background:var(--card); border:1px solid var(--line); border-radius:10px;
@@ -208,7 +226,8 @@
       <h1 id="pageTitle">Note Builder</h1>
       <div class="sub" id="pageSub">TAP SIZES → MULTI-SELECT → COPY</div>
     </div>
-    <button class="helpbtn" id="helpBtn">?</button>
+    <button class="lockbtn" id="lockBtn" style="display:none;">🔒</button>
+    <button class="helpbtn" id="helpBtn">?<span class="badge-dot" id="helpBadge"></span></button>
   </div>
 </header>
 
@@ -366,6 +385,42 @@ const DEFAULT_PRESETS = [
 
 const GITHUB_ISSUES_URL = 'https://github.com/paytonhussey76-rgb/Gas-Note-Builder/issues';
 
+const APP_VERSION = '1.2';
+const CHANGELOG = [
+  {
+    version: '1.2',
+    date: 'July 2026',
+    changes: [
+      'Quick Copy presets can now be reordered with up/down arrows — tap the 🔒 lock icon in the header to unlock reordering, tap it again to lock it back.',
+      'Custom pipe sizes now also ask for confirmation before deleting, same as Quick Copy presets.',
+      'The Help button now shows a small dot when there\'s something new you haven\'t seen yet.'
+    ]
+  },
+  {
+    version: '1.1',
+    date: 'July 2026',
+    changes: [
+      'Note Builder now autosaves as you tap, so a reload or a dropped connection won\'t erase your progress.',
+      'Quick Copy presets now ask you to confirm before deleting — tap DEL, then tap "Sure? Tap again" to actually remove it.',
+      'Added version numbers and this What\'s New page to Help, so you can see what changed.'
+    ]
+  },
+  {
+    version: '1.0',
+    date: 'July 2026',
+    changes: [
+      'First release: tap-based Note Builder for Poly, Steel, and High Pressure sizes.',
+      'Poly pipe got its own "in casing" section so a plain and cased line of the same size can both be marked.',
+      'Added the Abandoned section, marked "by measurement."',
+      'High Pressure picks automatically add the standby locator safety reminder.',
+      'Added Quick Copy for saving and reusing your most common notes.',
+      'Added Project Houses: find nearby addresses by GPS, grouped by street, with manual add as a backup, plus a box to combine your house list with your Note Builder note.',
+      'Added offline support and a home-screen app icon.',
+      'Added the Help menu with guides, an install wizard, and a link to report issues.'
+    ]
+  }
+];
+
 const HELP_CONTENT = {
   notebuilder: `
     <div class="help-text">
@@ -380,7 +435,7 @@ const HELP_CONTENT = {
       <h4>Notes</h4>
       <p>Tap "Meter nearby," "Riser nearby," and so on to add context to your note. Tap it again to mark plural (more than one).</p>
       <h4>Custom sizes</h4>
-      <p>Type a size that's not listed and hit <b>+</b> to add it. You can remove it later with the <b>×</b> next to it in the list below the box.</p>
+      <p>Type a size that's not listed and hit <b>+</b> to add it. Remove it later with the <b>×</b> next to it — tap once, then tap "Sure?" to confirm.</p>
       <h4>Copy note</h4>
       <p>The note at the bottom updates live as you tap things. Hit <b>Copy note</b> anytime to grab it for pasting into your ticket.</p>
     </div>`,
@@ -391,7 +446,9 @@ const HELP_CONTENT = {
       <h4>Adding your own</h4>
       <p>Don't see the one you need? Type it into the box at the bottom and tap <b>+ Add preset.</b> It'll remember it from then on, even after you close the app.</p>
       <h4>Removing one</h4>
-      <p>Tap <b>DEL</b> on any preset card you don't want anymore.</p>
+      <p>Tap <b>DEL</b> on any preset card, then tap "Sure? Tap again" to confirm. It won't delete on the first tap.</p>
+      <h4>Reordering</h4>
+      <p>Tap the <b>🔒</b> lock icon in the header to unlock reordering — up/down arrows appear on each preset. Tap the lock again when you're done to prevent bumping the order by accident.</p>
     </div>`,
   projecthouses: `
     <div class="help-text">
@@ -441,10 +498,48 @@ let quickPresets = [];
 let nearbyResults = [];
 let currentStreetFilter = null;
 let selectedHouses = [];
+let pendingDeleteIndex = null;
+let pendingDeleteTimer = null;
+let pendingSizeDelete = null;
+let pendingSizeDeleteTimer = null;
+let presetsLocked = true;
+let seenVersion = null;
 const SIZES_KEY = 'gas-note-builder-v2:custom-sizes';
 const PRESETS_KEY = 'gas-note-builder-v2:quick-presets';
 const HOUSES_KEY = 'gas-note-builder-v2:project-houses';
+const BUILDER_STATE_KEY = 'gas-note-builder-v2:builder-state';
+const SEEN_VERSION_KEY = 'gas-note-builder-v2:seen-version';
 const OVERPASS_RADIUS_M = 150;
+
+async function loadSeenVersion(){
+  try{ seenVersion = localStorage.getItem(SEEN_VERSION_KEY); }catch(e){ /* none yet */ }
+}
+function markVersionSeen(){
+  seenVersion = APP_VERSION;
+  try{ localStorage.setItem(SEEN_VERSION_KEY, APP_VERSION); }catch(e){ console.error('save failed', e); }
+}
+function hasUnseenUpdate(){
+  return seenVersion !== APP_VERSION;
+}
+function updateHelpBadge(){
+  const badge = document.getElementById('helpBadge');
+  if(badge) badge.style.display = hasUnseenUpdate() ? 'block' : 'none';
+}
+
+async function loadBuilderState(){
+  try{
+    const raw = localStorage.getItem(BUILDER_STATE_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      if(parsed.selections) selections = parsed.selections;
+      if(parsed.noteState) noteState = parsed.noteState;
+    }
+  }catch(e){ /* none yet */ }
+}
+function saveBuilderState(){
+  try{ localStorage.setItem(BUILDER_STATE_KEY, JSON.stringify({selections, noteState})); }
+  catch(e){ console.error('save failed', e); }
+}
 
 async function loadSelectedHouses(){
   try{
@@ -495,6 +590,21 @@ async function removeCustomSize(val){
   render();
 }
 
+function requestRemoveCustomSize(val){
+  clearTimeout(pendingSizeDeleteTimer);
+  if(pendingSizeDelete === val){
+    pendingSizeDelete = null;
+    removeCustomSize(val);
+  } else {
+    pendingSizeDelete = val;
+    pendingSizeDeleteTimer = setTimeout(()=>{
+      pendingSizeDelete = null;
+      render();
+    }, 2500);
+    render();
+  }
+}
+
 function renderCustomSizeList(){
   const wrap = document.getElementById('customSizeList');
   wrap.innerHTML = '';
@@ -507,8 +617,10 @@ function renderCustomSizeList(){
     const span = document.createElement('span');
     span.textContent = val;
     const del = document.createElement('button');
-    del.textContent = '×';
-    del.onclick = ()=>{ removeCustomSize(val); };
+    const pending = pendingSizeDelete === val;
+    del.className = pending ? 'confirm' : '';
+    del.textContent = pending ? 'Sure?' : '×';
+    del.onclick = ()=>{ requestRemoveCustomSize(val); };
     item.appendChild(span);
     item.appendChild(del);
     list.appendChild(item);
@@ -941,24 +1053,74 @@ function renderPreview(){
   preview.textContent = text || (VERB + '… (tap sizes above to build your note)');
 }
 
+function requestDeletePreset(idx){
+  clearTimeout(pendingDeleteTimer);
+  if(pendingDeleteIndex === idx){
+    quickPresets.splice(idx,1);
+    pendingDeleteIndex = null;
+    savePresets();
+    render();
+  } else {
+    pendingDeleteIndex = idx;
+    pendingDeleteTimer = setTimeout(()=>{
+      pendingDeleteIndex = null;
+      render();
+    }, 2500);
+    render();
+  }
+}
+
+function movePreset(idx, dir){
+  const newIdx = idx + dir;
+  if(newIdx < 0 || newIdx >= quickPresets.length) return;
+  const tmp = quickPresets[idx];
+  quickPresets[idx] = quickPresets[newIdx];
+  quickPresets[newIdx] = tmp;
+  savePresets();
+  render();
+}
+
 function renderQuickCopyList(){
   const wrap = document.getElementById('qcList');
   wrap.innerHTML = '';
   quickPresets.forEach((text, idx)=>{
     const card = document.createElement('button');
     card.className = 'qc-card';
-    card.innerHTML = `
-      <div class="qc-text">${text}</div>
-      <div class="qc-hint">Tap to copy</div>
-    `;
+
+    if(!presetsLocked){
+      const moveWrap = document.createElement('div');
+      moveWrap.className = 'qc-movewrap';
+      const upBtn = document.createElement('button');
+      upBtn.className = 'qc-move';
+      upBtn.textContent = '▲ Up';
+      upBtn.disabled = idx===0;
+      upBtn.onclick = (ev)=>{ ev.stopPropagation(); movePreset(idx, -1); };
+      const downBtn = document.createElement('button');
+      downBtn.className = 'qc-move';
+      downBtn.textContent = '▼ Down';
+      downBtn.disabled = idx===quickPresets.length-1;
+      downBtn.onclick = (ev)=>{ ev.stopPropagation(); movePreset(idx, 1); };
+      moveWrap.appendChild(upBtn);
+      moveWrap.appendChild(downBtn);
+      card.appendChild(moveWrap);
+    }
+
+    const textDiv = document.createElement('div');
+    textDiv.className = 'qc-text';
+    textDiv.textContent = text;
+    card.appendChild(textDiv);
+
+    const hintDiv = document.createElement('div');
+    hintDiv.className = 'qc-hint';
+    hintDiv.textContent = 'Tap to copy';
+    card.appendChild(hintDiv);
+
     const del = document.createElement('button');
-    del.className = 'qc-del';
-    del.textContent = 'DEL';
-    del.onclick = async (ev)=>{
+    del.className = 'qc-del' + (pendingDeleteIndex===idx ? ' confirm' : '');
+    del.textContent = pendingDeleteIndex===idx ? 'Sure? Tap again' : 'DEL';
+    del.onclick = (ev)=>{
       ev.stopPropagation();
-      quickPresets.splice(idx,1);
-      await savePresets();
-      render();
+      requestDeletePreset(idx);
     };
     card.appendChild(del);
     card.onclick = async ()=>{
@@ -1005,11 +1167,21 @@ function renderHelp(){
       <button class="help-menu-item" data-help="quickcopy"><span>⚡ Quick Copy</span><span class="arrow">›</span></button>
       <button class="help-menu-item" data-help="projecthouses"><span>📍 Project Houses</span><span class="arrow">›</span></button>
       <button class="help-menu-item" data-help="install-brand"><span>📲 Install as an App</span><span class="arrow">›</span></button>
+      <button class="help-menu-item" data-help="whatsnew"><span>🆕 What's New</span><span class="arrow">›</span></button>
       <a class="help-report" href="${GITHUB_ISSUES_URL}" target="_blank" rel="noopener">🐞 Report an issue</a>
+      <div style="text-align:center;color:var(--dim);font-size:11px;margin-top:14px;">Version ${APP_VERSION}</div>
     `;
     body.querySelectorAll('.help-menu-item').forEach(btn=>{
       btn.onclick = ()=>{ helpView = btn.dataset.help; renderHelp(); };
     });
+  } else if(helpView==='whatsnew'){
+    titleEl.textContent = "What's New";
+    body.innerHTML = `<div class="help-text">` + CHANGELOG.map(entry=>`
+      <h4>v${entry.version} — ${entry.date}</h4>
+      <ul>${entry.changes.map(c=>`<li>${c}</li>`).join('')}</ul>
+    `).join('') + `</div>`;
+    markVersionSeen();
+    updateHelpBadge();
   } else if(HELP_CONTENT[helpView]){
     const titles = { notebuilder:'Note Builder', quickcopy:'Quick Copy', projecthouses:'Project Houses' };
     titleEl.textContent = titles[helpView];
@@ -1070,6 +1242,11 @@ function render(){
   document.getElementById('quickCopyView').style.display = currentTab==='quickcopy' ? '' : 'none';
   document.getElementById('projectHousesView').style.display = currentTab==='projecthouses' ? '' : 'none';
   document.getElementById('footerBar').style.display = currentTab==='builder' ? '' : 'none';
+  if(currentTab !== 'quickcopy') presetsLocked = true;
+  const lockBtn = document.getElementById('lockBtn');
+  lockBtn.style.display = currentTab==='quickcopy' ? '' : 'none';
+  lockBtn.textContent = presetsLocked ? '🔒' : '🔓';
+  lockBtn.classList.toggle('unlocked', !presetsLocked);
   const titles = { builder:'Note Builder', quickcopy:'Quick Copy', projecthouses:'Project Houses' };
   const subs = {
     builder:'TAP SIZES → MULTI-SELECT → COPY',
@@ -1082,6 +1259,8 @@ function render(){
     el.classList.toggle('active', el.dataset.tab===currentTab);
   });
   syncFooterPadding();
+  saveBuilderState();
+  updateHelpBadge();
 }
 
 document.getElementById('menuBtn').onclick = ()=>{
@@ -1095,6 +1274,10 @@ document.getElementById('helpBtn').onclick = ()=>{
   helpBrand = null;
   helpBrowser = null;
   renderHelp();
+};
+document.getElementById('lockBtn').onclick = ()=>{
+  presetsLocked = !presetsLocked;
+  render();
 };
 document.getElementById('helpCloseBtn').onclick = ()=>{ helpOpen = false; renderHelp(); };
 document.getElementById('helpBackBtn').onclick = helpGoBack;
@@ -1235,6 +1418,8 @@ function syncFooterPadding(){
   await loadCustomSizes();
   await loadPresets();
   await loadSelectedHouses();
+  await loadBuilderState();
+  await loadSeenVersion();
   render();
   if('ResizeObserver' in window){
     new ResizeObserver(syncFooterPadding).observe(footerEl);
