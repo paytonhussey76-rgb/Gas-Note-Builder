@@ -129,6 +129,15 @@
     padding:14px; border-radius:10px; font-weight:700; font-size:14px; margin-bottom:10px;
   }
   .ph-status{ font-size:12px; color:var(--dim); margin-bottom:10px; min-height:16px; }
+  .street-row{ border:1px solid var(--line); border-radius:10px; margin-bottom:8px; overflow:hidden; }
+  .street-header{
+    width:100%; display:flex; justify-content:space-between; align-items:center;
+    background:var(--card); color:var(--ink); border:none; padding:12px 14px; font-size:13.5px; font-weight:600;
+  }
+  .street-header.active{ background:rgba(255,204,51,0.16); color:var(--gasflag); }
+  .street-header .chev{ color:var(--dim); font-size:11px; }
+  .street-header.active .chev{ color:var(--gasflag); }
+  .street-houses{ padding:12px 14px 6px; background:var(--asphalt-2); border-top:1px solid var(--line); }
   .sizechip.on.house{ background:rgba(255,204,51,0.22); border-color:var(--gasflag); }
   .sizechip .dist{ display:block; font-size:9px; font-weight:400; color:var(--dim); margin-top:2px; }
   .ph-preview{
@@ -236,10 +245,8 @@
     <div class="block">
       <button id="findHousesBtn" class="findbtn">📍 Find nearby houses</button>
       <div id="phStatus" class="ph-status"></div>
-      <div id="phStreetLabel" class="block-label" style="display:none;">Street</div>
-      <div id="phStreets"></div>
-      <div id="phHouseLabel" class="block-label" style="display:none;">House numbers</div>
-      <div id="phResults" class="chipwrap"></div>
+      <div id="phStreetLabel" class="block-label" style="display:none;">Street (tap to expand)</div>
+      <div id="phAccordion"></div>
     </div>
   </div>
 
@@ -394,8 +401,7 @@ function findNearbyHouses(){
   const btn = document.getElementById('findHousesBtn');
   nearbyResults = [];
   currentStreetFilter = null;
-  renderStreetList();
-  renderHouseResults();
+  renderStreetAccordion();
   if(!('geolocation' in navigator)){
     statusEl.textContent = 'Location isn\'t available in this browser.';
     return;
@@ -432,8 +438,7 @@ function findNearbyHouses(){
       if(results.length){
         currentStreetFilter = groupByStreet(results).order[0];
       }
-      renderStreetList();
-      renderHouseResults();
+      renderStreetAccordion();
       statusEl.textContent = results.length
         ? `Found ${results.length} nearby — closest first.`
         : 'No addresses found nearby. This area may not be well-mapped — add manually below.';
@@ -673,46 +678,47 @@ function buildHookupSentence(){
   return `Hooked up at ${joinedStreets}.`;
 }
 
-function renderStreetList(){
+function renderStreetAccordion(){
   const labelEl = document.getElementById('phStreetLabel');
-  const wrap = document.getElementById('phStreets');
+  const wrap = document.getElementById('phAccordion');
   wrap.innerHTML = '';
   if(!nearbyResults.length){ labelEl.style.display = 'none'; return; }
   labelEl.style.display = 'block';
   const { groups, order } = groupByStreet(nearbyResults);
-  const grid = document.createElement('div');
-  grid.className = 'chipwrap';
   order.forEach(street=>{
     const label = street || 'No street listed';
-    const b = document.createElement('button');
-    b.className = 'sizechip' + (currentStreetFilter===street ? ' on house' : '');
-    b.textContent = `${label} (${groups[street].length})`;
-    b.onclick = ()=>{ currentStreetFilter = street; render(); };
-    grid.appendChild(b);
-  });
-  wrap.appendChild(grid);
-}
+    const isActive = currentStreetFilter === street;
 
-function renderHouseResults(){
-  const labelEl = document.getElementById('phHouseLabel');
-  const wrap = document.getElementById('phResults');
-  wrap.innerHTML = '';
-  if(!nearbyResults.length || currentStreetFilter===null){ labelEl.style.display = 'none'; return; }
-  labelEl.style.display = 'block';
-  const { groups } = groupByStreet(nearbyResults);
-  const houses = (groups[currentStreetFilter] || []).slice().sort((a,b)=>a.dist-b.dist);
-  const grid = document.createElement('div');
-  grid.className = 'chipwrap';
-  houses.forEach(h=>{
-    const on = isHouseSelected(h);
-    const b = document.createElement('button');
-    b.className = 'sizechip' + (on ? ' on house' : '');
-    const distLabel = isFinite(h.dist) ? `${Math.round(h.dist)}m` : '';
-    b.innerHTML = h.housenumber + (distLabel ? `<span class="dist">${distLabel}</span>` : '');
-    b.onclick = ()=>{ toggleHouseSelection(h); render(); };
-    grid.appendChild(b);
+    const row = document.createElement('div');
+    row.className = 'street-row';
+
+    const header = document.createElement('button');
+    header.className = 'street-header' + (isActive ? ' active' : '');
+    header.innerHTML = `<span>${label} (${groups[street].length})</span><span class="chev">${isActive ? '▾' : '▸'}</span>`;
+    header.onclick = ()=>{ currentStreetFilter = isActive ? null : street; render(); };
+    row.appendChild(header);
+
+    if(isActive){
+      const housesWrap = document.createElement('div');
+      housesWrap.className = 'street-houses';
+      const grid = document.createElement('div');
+      grid.className = 'chipwrap';
+      const houses = groups[street].slice().sort((a,b)=>a.dist-b.dist);
+      houses.forEach(h=>{
+        const on = isHouseSelected(h);
+        const b = document.createElement('button');
+        b.className = 'sizechip' + (on ? ' on house' : '');
+        const distLabel = isFinite(h.dist) ? `${Math.round(h.dist)}m` : '';
+        b.innerHTML = h.housenumber + (distLabel ? `<span class="dist">${distLabel}</span>` : '');
+        b.onclick = (ev)=>{ ev.stopPropagation(); toggleHouseSelection(h); render(); };
+        grid.appendChild(b);
+      });
+      housesWrap.appendChild(grid);
+      row.appendChild(housesWrap);
+    }
+
+    wrap.appendChild(row);
   });
-  wrap.appendChild(grid);
 }
 
 function renderSelectedHouses(){
@@ -808,8 +814,7 @@ function render(){
   renderNotes();
   renderPreview();
   renderQuickCopyList();
-  renderStreetList();
-  renderHouseResults();
+  renderStreetAccordion();
   renderSelectedHouses();
 
   document.getElementById('builderView').style.display = currentTab==='builder' ? '' : 'none';
