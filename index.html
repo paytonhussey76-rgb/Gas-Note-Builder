@@ -99,6 +99,13 @@
   .customrow{ display:flex; gap:8px; padding:0 14px 14px; }
   .customrow input{ flex:1; background:var(--card); border:1px solid var(--line); border-radius:10px; color:var(--ink); padding:9px 10px; font-size:13px; }
   .customrow button{ background:var(--card); border:1px solid var(--line); color:var(--dim); border-radius:10px; padding:0 14px; font-size:16px; }
+  .customsize-list{ display:flex; flex-wrap:wrap; gap:7px; }
+  .customsize-item{
+    display:inline-flex; align-items:center; gap:6px;
+    background:var(--card); border:1px solid var(--line); border-radius:20px;
+    padding:6px 8px 6px 12px; font-size:12.5px; color:var(--dim);
+  }
+  .customsize-item button{ background:none; border:none; color:var(--danger); font-size:15px; line-height:1; padding:2px 4px; }
 
   .notewrap{ display:flex; flex-wrap:wrap; gap:7px; }
   .notechip{ border:1px solid var(--line); background:var(--card); color:var(--ink); padding:8px 12px; border-radius:20px; font-size:13px; position:relative; }
@@ -219,6 +226,8 @@
     <input id="customSizeInput" placeholder='Add a size not listed (e.g. 1 1/2")'>
     <button id="addSizeBtn">+</button>
   </div>
+  <div id="customSizeMsg" class="ph-status" style="padding:0 14px; margin-top:-8px;"></div>
+  <div id="customSizeList" style="padding:0 14px 14px;"></div>
 
   <div class="category" style="border-top-color:var(--line);">
     <div class="cat-head">NOTES</div>
@@ -358,6 +367,40 @@ async function savePresets(){
 }
 
 function allSizes(){ return [...SIZES, ...customSizes]; }
+
+async function removeCustomSize(val){
+  customSizes = customSizes.filter(s => s !== val);
+  ['service','mainline'].forEach(lt=>{
+    delete selections.poly[lt][val];
+    delete selections.steel[lt][val];
+  });
+  delete selections.hp.mainline[val];
+  delete selections.abandoned.poly[val];
+  delete selections.abandoned.steel[val];
+  await saveCustomSizes();
+  render();
+}
+
+function renderCustomSizeList(){
+  const wrap = document.getElementById('customSizeList');
+  wrap.innerHTML = '';
+  if(!customSizes.length) return;
+  const list = document.createElement('div');
+  list.className = 'customsize-list';
+  customSizes.forEach(val=>{
+    const item = document.createElement('div');
+    item.className = 'customsize-item';
+    const span = document.createElement('span');
+    span.textContent = val;
+    const del = document.createElement('button');
+    del.textContent = '×';
+    del.onclick = ()=>{ removeCustomSize(val); };
+    item.appendChild(span);
+    item.appendChild(del);
+    list.appendChild(item);
+  });
+  wrap.appendChild(list);
+}
 
 function distanceMeters(lat1, lon1, lat2, lon2){
   const R = 6371000;
@@ -811,6 +854,7 @@ function render(){
   renderSizeGrid('hpSizes', 'hp', 'mainline');
   renderLtRow('abandonedMatRow', [['poly','Poly'],['steel','Steel']], ()=>currentAbandonedMat, (k)=>{currentAbandonedMat=k;}, (k)=>Object.values(selections.abandoned[k]).filter(Boolean).length);
   renderAbandonedSizeGrid();
+  renderCustomSizeList();
   renderNotes();
   renderPreview();
   renderQuickCopyList();
@@ -849,11 +893,18 @@ document.querySelectorAll('.menuitem').forEach(el=>{
 
 document.getElementById('addSizeBtn').onclick = async ()=>{
   const input = document.getElementById('customSizeInput');
+  const msg = document.getElementById('customSizeMsg');
   const val = input.value.trim();
   if(!val) return;
-  if(!customSizes.includes(val)) customSizes.push(val);
+  if(allSizes().includes(val)){
+    msg.textContent = `"${val}" is already in the list.`;
+    setTimeout(()=>{ msg.textContent = ''; }, 2000);
+    return;
+  }
+  customSizes.push(val);
   await saveCustomSizes();
   input.value = '';
+  msg.textContent = '';
   render();
 };
 
