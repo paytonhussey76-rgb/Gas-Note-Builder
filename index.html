@@ -124,6 +124,18 @@
     padding:12px; border-radius:10px; font-weight:700; font-size:13px;
   }
 
+  .findbtn{
+    width:100%; background:var(--gasflag); color:#1c1f22; border:none;
+    padding:14px; border-radius:10px; font-weight:700; font-size:14px; margin-bottom:10px;
+  }
+  .ph-status{ font-size:12px; color:var(--dim); margin-bottom:10px; min-height:16px; }
+  .sizechip.on.house{ background:rgba(255,204,51,0.22); border-color:var(--gasflag); }
+  .sizechip .dist{ display:block; font-size:9px; font-weight:400; color:var(--dim); margin-top:2px; }
+  .ph-preview{
+    font-size:14px; line-height:1.4; font-family:'Courier New',monospace;
+    background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:12px;
+  }
+
   footer{
     position:fixed; bottom:0; left:0; right:0; background:var(--paper); color:#1c1f22;
     padding:14px 16px 18px; border-top:3px solid var(--gasflag);
@@ -151,6 +163,7 @@
 <div class="menupanel" id="menuPanel">
   <button class="menuitem" data-tab="builder">Note Builder</button>
   <button class="menuitem" data-tab="quickcopy">Quick Copy</button>
+  <button class="menuitem" data-tab="projecthouses">Project Houses</button>
 </div>
 
 <main id="builderView">
@@ -217,6 +230,40 @@
   </div>
 </main>
 
+<main id="projectHousesView" style="display:none;">
+  <div class="category" style="border-top-color:var(--gasflag);">
+    <div class="cat-head">FIND NEARBY HOUSES</div>
+    <div class="block">
+      <button id="findHousesBtn" class="findbtn">📍 Find nearby houses</button>
+      <div id="phStatus" class="ph-status"></div>
+      <div id="phResults" class="chipwrap"></div>
+    </div>
+  </div>
+
+  <div class="category" style="border-top-color:var(--line);">
+    <div class="cat-head">ADD MANUALLY</div>
+    <div class="block">
+      <div class="customrow" style="padding:0 0 4px;">
+        <input id="phManualInput" placeholder='Not in the list? e.g. 129 Main St'>
+        <button id="phManualAddBtn">+</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="category" style="border-top-color:var(--gasflag);">
+    <div class="cat-head">SELECTED HOUSES <span class="tag" id="phCount"></span></div>
+    <div class="block">
+      <div id="phSelectedList" class="chipwrap"></div>
+      <div class="block-label">Hookup note</div>
+      <div id="phPreview" class="ph-preview">No houses selected yet.</div>
+      <div class="footer-row" style="padding-bottom:10px;">
+        <button class="copybtn" id="phCopyBtn">Copy hookup list</button>
+        <button class="clearbtn" id="phClearBtn">Clear list</button>
+      </div>
+    </div>
+  </div>
+</main>
+
 <footer id="footerBar">
   <div class="label">Generated note</div>
   <div id="preview">Marked…</div>
@@ -258,8 +305,23 @@ let selections = {
 let noteState = {};
 let customSizes = [];
 let quickPresets = [];
+let nearbyResults = [];
+let selectedHouses = [];
 const SIZES_KEY = 'gas-note-builder-v2:custom-sizes';
 const PRESETS_KEY = 'gas-note-builder-v2:quick-presets';
+const HOUSES_KEY = 'gas-note-builder-v2:project-houses';
+const OVERPASS_RADIUS_M = 150;
+
+async function loadSelectedHouses(){
+  try{
+    const raw = localStorage.getItem(HOUSES_KEY);
+    if(raw) selectedHouses = JSON.parse(raw);
+  }catch(e){ /* none yet */ }
+}
+async function saveSelectedHouses(){
+  try{ localStorage.setItem(HOUSES_KEY, JSON.stringify(selectedHouses)); }
+  catch(e){ console.error('save failed', e); }
+}
 
 async function loadCustomSizes(){
   try{
@@ -285,6 +347,80 @@ async function savePresets(){
 }
 
 function allSizes(){ return [...SIZES, ...customSizes]; }
+
+function distanceMeters(lat1, lon1, lat2, lon2){
+  const R = 6371000;
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function houseKey(h){ return (h.housenumber||'') + '|' + (h.street||''); }
+function isHouseSelected(h){
+  const k = houseKey(h);
+  return selectedHouses.some(s => houseKey(s)===k);
+}
+function toggleHouseSelection(h){
+  const k = houseKey(h);
+  const idx = selectedHouses.findIndex(s => houseKey(s)===k);
+  if(idx>-1) selectedHouses.splice(idx,1);
+  else selectedHouses.push({housenumber:h.housenumber, street:h.street});
+  saveSelectedHouses();
+}
+
+function findNearbyHouses(){
+  const statusEl = document.getElementById('phStatus');
+  const btn = document.getElementById('findHousesBtn');
+  nearbyResults = [];
+  renderHouseResults();
+  if(!('geolocation' in navigator)){
+    statusEl.textContent = 'Location isn\'t available in this browser.';
+    return;
+  }
+  btn.disabled = true;
+  statusEl.textContent = 'Getting your location…';
+  navigator.geolocation.getCurrentPosition(async (pos)=>{
+    const { latitude, longitude } = pos.coords;
+    statusEl.textContent = 'Searching nearby addresses…';
+    try{
+      const query = `[out:json][timeout:25];(node["addr:housenumber"](around:${OVERPASS_RADIUS_M},${latitude},${longitude});way["addr:housenumber"](around:${OVERPASS_RADIUS_M},${latitude},${longitude}););out center tags;`;
+      const res = await fetch('https://overpass-api.de/api/interpreter', {
+        method:'POST',
+        body:'data=' + encodeURIComponent(query)
+      });
+      if(!res.ok) throw new Error('bad response');
+      const data = await res.json();
+      const seen = new Set();
+      const results = [];
+      (data.elements||[]).forEach(el=>{
+        const hn = el.tags && el.tags['addr:housenumber'];
+        if(!hn) return;
+        const street = el.tags['addr:street'] || '';
+        const key = hn + '|' + street;
+        if(seen.has(key)) return;
+        seen.add(key);
+        const lat = el.lat != null ? el.lat : (el.center ? el.center.lat : null);
+        const lon = el.lon != null ? el.lon : (el.center ? el.center.lon : null);
+        const dist = (lat!=null && lon!=null) ? distanceMeters(latitude, longitude, lat, lon) : Infinity;
+        results.push({ housenumber:hn, street, dist });
+      });
+      results.sort((a,b)=>a.dist-b.dist);
+      nearbyResults = results;
+      renderHouseResults();
+      statusEl.textContent = results.length
+        ? `Found ${results.length} nearby — closest first.`
+        : 'No addresses found nearby. This area may not be well-mapped — add manually below.';
+    }catch(e){
+      statusEl.textContent = 'Could not reach the address lookup. Check your connection and try again.';
+    }
+    btn.disabled = false;
+  }, (err)=>{
+    statusEl.textContent = 'Location permission denied or unavailable — enable location access and try again.';
+    btn.disabled = false;
+  }, { enableHighAccuracy:true, timeout:15000 });
+}
 
 async function copyTextRobust(text){
   try{
@@ -491,6 +627,57 @@ function buildAbandonedSentence(){
   return `Marked abandoned ${joined} by measurement.`;
 }
 
+function buildHookupSentence(){
+  if(!selectedHouses.length) return null;
+  const groups = {};
+  const order = [];
+  selectedHouses.forEach(h=>{
+    const street = h.street || '';
+    if(!groups[street]){ groups[street] = []; order.push(street); }
+    groups[street].push(h.housenumber);
+  });
+  const streetPhrases = order.map(street=>{
+    const nums = groups[street];
+    const joined = nums.length===1 ? nums[0]
+      : nums.length===2 ? nums.join(' and ')
+      : nums.slice(0,-1).join(', ') + ' and ' + nums[nums.length-1];
+    return street ? `${joined} ${street}` : joined;
+  });
+  const joinedStreets = streetPhrases.length===1 ? streetPhrases[0]
+    : streetPhrases.slice(0,-1).join(', ') + ' and ' + streetPhrases[streetPhrases.length-1];
+  return `Hooked up at ${joinedStreets}.`;
+}
+
+function renderHouseResults(){
+  const wrap = document.getElementById('phResults');
+  wrap.innerHTML = '';
+  nearbyResults.forEach(h=>{
+    const on = isHouseSelected(h);
+    const b = document.createElement('button');
+    b.className = 'sizechip' + (on ? ' on house' : '');
+    const label = h.street ? `${h.housenumber} ${h.street}` : h.housenumber;
+    const distLabel = isFinite(h.dist) ? `${Math.round(h.dist)}m away` : '';
+    b.innerHTML = label + (distLabel ? `<span class="dist">${distLabel}</span>` : '');
+    b.onclick = ()=>{ toggleHouseSelection(h); render(); };
+    wrap.appendChild(b);
+  });
+}
+
+function renderSelectedHouses(){
+  const wrap = document.getElementById('phSelectedList');
+  wrap.innerHTML = '';
+  selectedHouses.forEach(h=>{
+    const b = document.createElement('button');
+    b.className = 'sizechip on house';
+    b.textContent = h.street ? `${h.housenumber} ${h.street}` : h.housenumber;
+    b.onclick = ()=>{ toggleHouseSelection(h); render(); };
+    wrap.appendChild(b);
+  });
+  document.getElementById('phCount').textContent = selectedHouses.length ? `(${selectedHouses.length})` : '';
+  const sentence = buildHookupSentence();
+  document.getElementById('phPreview').textContent = sentence || 'No houses selected yet.';
+}
+
 function renderPreview(){
   const items = buildItems();
   const notePhrases = buildNotesClause();
@@ -569,12 +756,21 @@ function render(){
   renderNotes();
   renderPreview();
   renderQuickCopyList();
+  renderHouseResults();
+  renderSelectedHouses();
 
   document.getElementById('builderView').style.display = currentTab==='builder' ? '' : 'none';
   document.getElementById('quickCopyView').style.display = currentTab==='quickcopy' ? '' : 'none';
+  document.getElementById('projectHousesView').style.display = currentTab==='projecthouses' ? '' : 'none';
   document.getElementById('footerBar').style.display = currentTab==='builder' ? '' : 'none';
-  document.getElementById('pageTitle').textContent = currentTab==='builder' ? 'Note Builder' : 'Quick Copy';
-  document.getElementById('pageSub').textContent = currentTab==='builder' ? 'TAP SIZES → MULTI-SELECT → COPY' : 'TAP A PRESET TO COPY';
+  const titles = { builder:'Note Builder', quickcopy:'Quick Copy', projecthouses:'Project Houses' };
+  const subs = {
+    builder:'TAP SIZES → MULTI-SELECT → COPY',
+    quickcopy:'TAP A PRESET TO COPY',
+    projecthouses:'FIND & TAP NEARBY HOUSES'
+  };
+  document.getElementById('pageTitle').textContent = titles[currentTab];
+  document.getElementById('pageSub').textContent = subs[currentTab];
   document.querySelectorAll('.menuitem').forEach(el=>{
     el.classList.toggle('active', el.dataset.tab===currentTab);
   });
@@ -610,6 +806,46 @@ document.getElementById('qcAddBtn').onclick = async ()=>{
   quickPresets.push(val);
   await savePresets();
   ta.value = '';
+  render();
+};
+
+document.getElementById('findHousesBtn').onclick = findNearbyHouses;
+
+document.getElementById('phManualAddBtn').onclick = async ()=>{
+  const input = document.getElementById('phManualInput');
+  const val = input.value.trim();
+  if(!val) return;
+  const key = val + '|';
+  if(!selectedHouses.some(s => houseKey(s)===key)){
+    selectedHouses.push({ housenumber: val, street: '' });
+    await saveSelectedHouses();
+  }
+  input.value = '';
+  render();
+};
+
+document.getElementById('phCopyBtn').onclick = async ()=>{
+  const preview = document.getElementById('phPreview');
+  const text = preview.textContent;
+  const btn = document.getElementById('phCopyBtn');
+  const ok = await copyTextRobust(text);
+  if(ok){
+    btn.textContent = 'Copied ✓';
+    btn.classList.add('done');
+  } else {
+    const range = document.createRange();
+    range.selectNodeContents(preview);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    btn.textContent = 'Long-press to copy';
+  }
+  setTimeout(()=>{ btn.textContent='Copy hookup list'; btn.classList.remove('done'); }, 1800);
+};
+
+document.getElementById('phClearBtn').onclick = async ()=>{
+  selectedHouses = [];
+  await saveSelectedHouses();
   render();
 };
 
@@ -652,6 +888,7 @@ function syncFooterPadding(){
 (async ()=>{
   await loadCustomSizes();
   await loadPresets();
+  await loadSelectedHouses();
   render();
   if('ResizeObserver' in window){
     new ResizeObserver(syncFooterPadding).observe(footerEl);
