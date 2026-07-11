@@ -236,6 +236,9 @@
     <div class="block">
       <button id="findHousesBtn" class="findbtn">📍 Find nearby houses</button>
       <div id="phStatus" class="ph-status"></div>
+      <div id="phStreetLabel" class="block-label" style="display:none;">Street</div>
+      <div id="phStreets"></div>
+      <div id="phHouseLabel" class="block-label" style="display:none;">House numbers</div>
       <div id="phResults" class="chipwrap"></div>
     </div>
   </div>
@@ -306,6 +309,7 @@ let noteState = {};
 let customSizes = [];
 let quickPresets = [];
 let nearbyResults = [];
+let currentStreetFilter = null;
 let selectedHouses = [];
 const SIZES_KEY = 'gas-note-builder-v2:custom-sizes';
 const PRESETS_KEY = 'gas-note-builder-v2:quick-presets';
@@ -369,11 +373,28 @@ function toggleHouseSelection(h){
   else selectedHouses.push({housenumber:h.housenumber, street:h.street});
   saveSelectedHouses();
 }
+function groupByStreet(results){
+  const groups = {};
+  const order = [];
+  results.forEach(h=>{
+    const key = h.street || '';
+    if(!groups[key]){ groups[key] = []; order.push(key); }
+    groups[key].push(h);
+  });
+  order.sort((a,b)=>{
+    const da = Math.min(...groups[a].map(h=>h.dist));
+    const db = Math.min(...groups[b].map(h=>h.dist));
+    return da - db;
+  });
+  return { groups, order };
+}
 
 function findNearbyHouses(){
   const statusEl = document.getElementById('phStatus');
   const btn = document.getElementById('findHousesBtn');
   nearbyResults = [];
+  currentStreetFilter = null;
+  renderStreetList();
   renderHouseResults();
   if(!('geolocation' in navigator)){
     statusEl.textContent = 'Location isn\'t available in this browser.';
@@ -408,6 +429,10 @@ function findNearbyHouses(){
       });
       results.sort((a,b)=>a.dist-b.dist);
       nearbyResults = results;
+      if(results.length){
+        currentStreetFilter = groupByStreet(results).order[0];
+      }
+      renderStreetList();
       renderHouseResults();
       statusEl.textContent = results.length
         ? `Found ${results.length} nearby — closest first.`
@@ -648,19 +673,46 @@ function buildHookupSentence(){
   return `Hooked up at ${joinedStreets}.`;
 }
 
+function renderStreetList(){
+  const labelEl = document.getElementById('phStreetLabel');
+  const wrap = document.getElementById('phStreets');
+  wrap.innerHTML = '';
+  if(!nearbyResults.length){ labelEl.style.display = 'none'; return; }
+  labelEl.style.display = 'block';
+  const { groups, order } = groupByStreet(nearbyResults);
+  const grid = document.createElement('div');
+  grid.className = 'chipwrap';
+  order.forEach(street=>{
+    const label = street || 'No street listed';
+    const b = document.createElement('button');
+    b.className = 'sizechip' + (currentStreetFilter===street ? ' on house' : '');
+    b.textContent = `${label} (${groups[street].length})`;
+    b.onclick = ()=>{ currentStreetFilter = street; render(); };
+    grid.appendChild(b);
+  });
+  wrap.appendChild(grid);
+}
+
 function renderHouseResults(){
+  const labelEl = document.getElementById('phHouseLabel');
   const wrap = document.getElementById('phResults');
   wrap.innerHTML = '';
-  nearbyResults.forEach(h=>{
+  if(!nearbyResults.length || currentStreetFilter===null){ labelEl.style.display = 'none'; return; }
+  labelEl.style.display = 'block';
+  const { groups } = groupByStreet(nearbyResults);
+  const houses = (groups[currentStreetFilter] || []).slice().sort((a,b)=>a.dist-b.dist);
+  const grid = document.createElement('div');
+  grid.className = 'chipwrap';
+  houses.forEach(h=>{
     const on = isHouseSelected(h);
     const b = document.createElement('button');
     b.className = 'sizechip' + (on ? ' on house' : '');
-    const label = h.street ? `${h.housenumber} ${h.street}` : h.housenumber;
-    const distLabel = isFinite(h.dist) ? `${Math.round(h.dist)}m away` : '';
-    b.innerHTML = label + (distLabel ? `<span class="dist">${distLabel}</span>` : '');
+    const distLabel = isFinite(h.dist) ? `${Math.round(h.dist)}m` : '';
+    b.innerHTML = h.housenumber + (distLabel ? `<span class="dist">${distLabel}</span>` : '');
     b.onclick = ()=>{ toggleHouseSelection(h); render(); };
-    wrap.appendChild(b);
+    grid.appendChild(b);
   });
+  wrap.appendChild(grid);
 }
 
 function renderSelectedHouses(){
@@ -756,6 +808,7 @@ function render(){
   renderNotes();
   renderPreview();
   renderQuickCopyList();
+  renderStreetList();
   renderHouseResults();
   renderSelectedHouses();
 
