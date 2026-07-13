@@ -1,0 +1,1570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Gas Locate Note Builder</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1c1f22">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Gas Notes">
+<style>
+  :root{
+    --asphalt:#1c1f22;
+    --asphalt-2:#25292d;
+    --card:#2c3136;
+    --line:#3a4048;
+    --paper:#f2ede2;
+    --ink:#e9e5db;
+    --dim:#9aa3ab;
+    --gasflag:#ffcc33;
+    --poly:#3fc7c7;
+    --steel:#b7bec6;
+    --hp:#ff6a3d;
+    --abandoned:#a68a5b;
+    --danger:#ff6b6b;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--asphalt); color:var(--ink);
+    font-family:'Segoe UI',system-ui,-apple-system,sans-serif; padding-bottom:220px;
+  }
+  header{
+    padding:20px 18px 14px; border-bottom:1px solid var(--line);
+    position:sticky; top:0; z-index:5; background:var(--asphalt);
+  }
+  .headerrow{ display:flex; align-items:center; gap:12px; }
+  .menubtn{
+    background:var(--card); border:1px solid var(--line); color:var(--ink);
+    width:38px; height:38px; border-radius:10px; font-size:18px; flex:0 0 auto; line-height:1;
+  }
+  .headertext h1{ font-size:18px; margin:0 0 2px; font-weight:700; }
+  .headertext .sub{ font-size:11px; color:var(--dim); font-family:'Courier New',monospace; letter-spacing:0.5px; }
+  .headertext{ flex:1; min-width:0; }
+  .helpbtn{
+    position:relative;
+    background:var(--card); border:1px solid var(--line); color:var(--gasflag);
+    width:38px; height:38px; border-radius:10px; font-size:16px; font-weight:800; flex:0 0 auto; line-height:1;
+  }
+  .helpbtn .badge-dot{
+    position:absolute; top:-3px; right:-3px; width:11px; height:11px; border-radius:50%;
+    background:var(--danger); border:2px solid var(--asphalt); display:none;
+  }
+  .lockbtn{
+    background:var(--card); border:1px solid var(--line); color:var(--dim);
+    width:38px; height:38px; border-radius:10px; font-size:15px; flex:0 0 auto; line-height:1;
+  }
+  .lockbtn.unlocked{ border-color:var(--danger); color:var(--danger); }
+
+  .menupanel{
+    display:none; flex-direction:column; position:fixed; top:76px; left:16px;
+    background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden;
+    z-index:20; min-width:190px; box-shadow:0 10px 30px rgba(0,0,0,0.45);
+  }
+  .menuitem{
+    background:none; border:none; color:var(--ink); text-align:left; padding:13px 16px;
+    font-size:14px; border-bottom:1px solid var(--line);
+  }
+  .menuitem:last-child{ border-bottom:none; }
+  .menuitem.active{ color:var(--gasflag); font-weight:700; }
+
+  main{ padding:16px; }
+
+  .category{
+    background:var(--asphalt-2); border:1px solid var(--line); border-radius:14px;
+    margin-bottom:16px; overflow:hidden; border-top-width:3px;
+  }
+  .category.poly{ border-top-color:var(--poly); }
+  .category.poly-casing{ border-top-color:var(--poly); border-top-style:dashed; }
+  .category.steel{ border-top-color:var(--steel); }
+  .category.hp{ border-top-color:var(--hp); }
+  .category.abandoned{ border-top-color:var(--abandoned); border-top-style:dashed; }
+  .cat-head{
+    padding:12px 14px 4px; font-size:13px; font-weight:700; letter-spacing:0.5px;
+  }
+  .cat-head .tag{ font-size:10px; font-weight:400; color:var(--dim); margin-left:6px; }
+  .block{ padding:10px 14px 4px; }
+  .block-label{ font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--dim); margin-bottom:8px; font-weight:600; }
+
+  .ltrow{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+  .ltchip{
+    flex:1 1 calc(50% - 4px); text-align:center; border:1px solid var(--line); background:var(--card); color:var(--dim);
+    padding:8px 10px; border-radius:10px; font-size:12.5px;
+  }
+  .ltchip.active{ color:var(--ink); border-color:var(--ink); }
+
+  .chipwrap{ display:flex; flex-wrap:wrap; gap:7px; margin-bottom:12px; }
+  .sizechip{
+    position:relative; border:1px solid var(--line); background:var(--card); color:var(--ink);
+    padding:9px 14px; border-radius:10px; font-size:14px; font-weight:600;
+  }
+  .sizechip.on.poly{ background:rgba(63,199,199,0.22); border-color:var(--poly); }
+  .sizechip.on.steel{ background:rgba(183,190,198,0.22); border-color:var(--steel); }
+  .sizechip.on.hp{ background:rgba(255,106,61,0.22); border-color:var(--hp); }
+  .sizechip.on.abandoned{ background:rgba(166,138,91,0.25); border-color:var(--abandoned); }
+  .badge-s{
+    position:absolute; top:-6px; right:-6px; background:var(--gasflag); color:#1c1f22;
+    font-size:10px; font-weight:800; border-radius:8px; padding:1px 5px; line-height:1.3;
+  }
+
+  .customrow{ display:flex; gap:8px; padding:0 14px 14px; }
+  .customrow input{ flex:1; background:var(--card); border:1px solid var(--line); border-radius:10px; color:var(--ink); padding:9px 10px; font-size:13px; }
+  .customrow button{ background:var(--card); border:1px solid var(--line); color:var(--dim); border-radius:10px; padding:0 14px; font-size:16px; }
+  .customsize-list{ display:flex; flex-wrap:wrap; gap:7px; }
+  .customsize-item{
+    display:inline-flex; align-items:center; gap:6px;
+    background:var(--card); border:1px solid var(--line); border-radius:20px;
+    padding:6px 8px 6px 12px; font-size:12.5px; color:var(--dim);
+  }
+  .customsize-item button{ background:none; border:none; color:var(--danger); font-size:15px; line-height:1; padding:2px 4px; }
+  .customsize-item button.confirm{ background:var(--danger); color:#1c1f22; border-radius:6px; padding:3px 7px; font-weight:700; font-size:11px; }
+
+  .notewrap{ display:flex; flex-wrap:wrap; gap:7px; }
+  .notechip{ border:1px solid var(--line); background:var(--card); color:var(--ink); padding:8px 12px; border-radius:20px; font-size:13px; position:relative; }
+  .notechip.on{ background:#3b3220; border-color:var(--gasflag); color:var(--gasflag); }
+  .notechip.multi{ border-color:var(--gasflag); }
+
+  .qc-card{
+    background:var(--asphalt-2); border:1px solid var(--line); border-radius:12px;
+    padding:12px 14px; margin-bottom:10px; position:relative; text-align:left; width:100%;
+  }
+  .qc-card.copied{ border-color:#5fd66b; }
+  .qc-text{ font-size:13.5px; line-height:1.4; font-family:'Courier New',monospace; padding-right:24px; color:var(--ink); white-space:pre-line; }
+  .qc-hint{ font-size:10px; color:var(--dim); margin-top:8px; text-transform:uppercase; letter-spacing:0.5px; }
+  .qc-hint.copied{ color:#5fd66b; }
+  .qc-del{ position:absolute; top:8px; right:8px; background:none; border:none; color:var(--danger); font-size:11px; padding:4px 6px; }
+  .qc-del.confirm{ background:var(--danger); color:#1c1f22; border-radius:6px; font-weight:700; padding:5px 8px; }
+  .qc-movewrap{ display:flex; gap:8px; margin-bottom:10px; }
+  .qc-move{
+    background:var(--card); border:1px solid var(--gasflag); color:var(--gasflag);
+    padding:6px 12px; border-radius:8px; font-size:12px; font-weight:600;
+  }
+  .qc-move:disabled{ opacity:0.3; border-color:var(--line); color:var(--dim); }
+  .qc-add{ margin-top:6px; }
+  .qc-add textarea{
+    width:100%; min-height:70px; background:var(--card); border:1px solid var(--line); border-radius:10px;
+    color:var(--ink); padding:10px; font-size:13px; font-family:'Courier New',monospace;
+  }
+  .qc-add button{
+    margin-top:8px; width:100%; background:var(--gasflag); color:#1c1f22; border:none;
+    padding:12px; border-radius:10px; font-weight:700; font-size:13px;
+  }
+
+  .findbtn{
+    width:100%; background:var(--gasflag); color:#1c1f22; border:none;
+    padding:14px; border-radius:10px; font-weight:700; font-size:14px; margin-bottom:10px;
+  }
+  .ph-status{ font-size:12px; color:var(--dim); margin-bottom:10px; min-height:16px; }
+  .street-row{ border:1px solid var(--line); border-radius:10px; margin-bottom:8px; overflow:hidden; }
+  .street-header{
+    width:100%; display:flex; justify-content:space-between; align-items:center;
+    background:var(--card); color:var(--ink); border:none; padding:12px 14px; font-size:13.5px; font-weight:600;
+  }
+  .street-header.active{ background:rgba(255,204,51,0.16); color:var(--gasflag); }
+  .street-header .chev{ color:var(--dim); font-size:11px; }
+  .street-header.active .chev{ color:var(--gasflag); }
+  .street-houses{ padding:12px 14px 6px; background:var(--asphalt-2); border-top:1px solid var(--line); }
+  .sizechip.on.house{ background:rgba(255,204,51,0.22); border-color:var(--gasflag); }
+  .sizechip .dist{ display:block; font-size:9px; font-weight:400; color:var(--dim); margin-top:2px; }
+  .ph-preview{
+    display:block; width:100%; box-sizing:border-box;
+    font-size:14px; line-height:1.4; font-family:'Courier New',monospace;
+    background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:12px;
+    color:var(--ink); resize:none; overflow:hidden; outline:none;
+  }
+  .ph-preview:focus{ border-color:var(--gasflag); }
+
+  footer{
+    position:fixed; bottom:0; left:0; right:0; background:var(--paper); color:#1c1f22;
+    padding:14px 16px 18px; border-top:3px solid var(--gasflag);
+  }
+  footer .label{ font-size:10px; text-transform:uppercase; letter-spacing:1.5px; color:#6b6456; margin-bottom:5px; font-weight:700; }
+  #preview{
+    display:block; width:100%; box-sizing:border-box;
+    font-size:14.5px; line-height:1.4; min-height:20px; margin-bottom:10px; font-family:'Courier New',monospace;
+    background:none; border:none; outline:none; resize:none; overflow:hidden; color:#1c1f22; padding:0;
+  }
+  .footer-row{ display:flex; gap:10px; }
+  .copybtn{ flex:1; background:#1c1f22; color:var(--gasflag); border:none; padding:13px; border-radius:10px; font-size:14px; font-weight:700; }
+  .copybtn.done{ color:#5fd66b; }
+  .clearbtn{ background:none; border:1px solid #6b6456; color:#6b6456; padding:13px 16px; border-radius:10px; font-size:13px; }
+
+  .help-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:50;
+    display:none; align-items:flex-end; justify-content:center;
+  }
+  .help-panel{
+    background:var(--asphalt); width:100%; max-height:85vh; border-radius:18px 18px 0 0;
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  .help-panel-head{
+    display:flex; align-items:center; padding:14px 8px; border-bottom:1px solid var(--line); flex:0 0 auto;
+  }
+  .help-panel-title{ font-size:15px; font-weight:700; flex:1; text-align:center; }
+  .help-back, .help-close{ background:none; border:none; color:var(--ink); font-size:14px; padding:8px 10px; flex:0 0 auto; min-width:44px; }
+  .help-close{ font-size:22px; line-height:1; }
+  .help-panel-body{ padding:16px; overflow-y:auto; }
+  .help-menu-item{
+    width:100%; text-align:left; background:var(--card); border:1px solid var(--line); color:var(--ink);
+    padding:14px 16px; border-radius:12px; margin-bottom:10px; font-size:14px; font-weight:600;
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .help-menu-item .arrow{ color:var(--dim); font-weight:400; }
+  .help-text{ font-size:13.5px; line-height:1.7; color:var(--ink); }
+  .help-text h4{ font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--gasflag); margin:16px 0 6px; }
+  .help-text h4:first-child{ margin-top:0; }
+  .help-text p{ margin:0 0 10px; }
+  .help-report{
+    display:block; text-align:center; margin-top:10px; padding:12px; border-radius:12px;
+    background:none; border:1px dashed var(--line); color:var(--dim); font-size:13px; text-decoration:none;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="headerrow">
+    <button class="menubtn" id="menuBtn">☰</button>
+    <div class="headertext">
+      <h1 id="pageTitle">Note Builder</h1>
+      <div class="sub" id="pageSub">TAP SIZES → MULTI-SELECT → COPY</div>
+    </div>
+    <button class="lockbtn" id="lockBtn" style="display:none;">🔒</button>
+    <button class="helpbtn" id="helpBtn">?<span class="badge-dot" id="helpBadge"></span></button>
+  </div>
+</header>
+
+<div class="menupanel" id="menuPanel">
+  <button class="menuitem" data-tab="builder">Note Builder</button>
+  <button class="menuitem" data-tab="quickcopy">Quick Copy</button>
+  <button class="menuitem" data-tab="projecthouses">Project Houses</button>
+</div>
+
+<div class="help-overlay" id="helpOverlay">
+  <div class="help-panel">
+    <div class="help-panel-head">
+      <button class="help-back" id="helpBackBtn" style="display:none;">‹ Back</button>
+      <div class="help-panel-title" id="helpPanelTitle">Help</div>
+      <button class="help-close" id="helpCloseBtn">×</button>
+    </div>
+    <div class="help-panel-body" id="helpPanelBody"></div>
+  </div>
+</div>
+
+<main id="builderView">
+  <div class="category poly">
+    <div class="cat-head">POLY</div>
+    <div class="block">
+      <div id="polyLt" class="ltrow"></div>
+      <div id="polySizes"></div>
+    </div>
+  </div>
+
+  <div class="category poly-casing">
+    <div class="cat-head">POLY <span class="tag">in casing</span></div>
+    <div class="block">
+      <div id="polyCasingLt" class="ltrow"></div>
+      <div id="polyCasingSizes"></div>
+    </div>
+  </div>
+
+  <div class="category steel">
+    <div class="cat-head">STEEL</div>
+    <div class="block">
+      <div id="steelLt" class="ltrow"></div>
+      <div id="steelSizes"></div>
+    </div>
+  </div>
+
+  <div class="category hp">
+    <div class="cat-head">HIGH PRESSURE <span class="tag">steel mainline</span></div>
+    <div class="block">
+      <div id="hpSizes"></div>
+    </div>
+  </div>
+
+  <div class="category abandoned">
+    <div class="cat-head">ABANDONED <span class="tag" id="abandonedTag">by measurement</span></div>
+    <div class="block">
+      <div id="abandonedMatRow" class="ltrow"></div>
+      <div id="abandonedSizes"></div>
+    </div>
+  </div>
+
+  <div class="customrow">
+    <input id="customSizeInput" placeholder='Add a size not listed (e.g. 1 1/2")'>
+    <button id="addSizeBtn">+</button>
+  </div>
+  <div id="customSizeMsg" class="ph-status" style="padding:0 14px; margin-top:-8px;"></div>
+  <div id="customSizeList" style="padding:0 14px 14px;"></div>
+
+  <div class="category" style="border-top-color:var(--line);">
+    <div class="cat-head">NOTES</div>
+    <div class="block">
+      <div class="notewrap" id="notewrap"></div>
+    </div>
+  </div>
+</main>
+
+<main id="quickCopyView" style="display:none;">
+  <div id="qcList"></div>
+  <div class="category" style="border-top-color:var(--line);">
+    <div class="cat-head">ADD A PRESET</div>
+    <div class="block qc-add">
+      <textarea id="qcNewText" placeholder='Type the full note, e.g. Marked 1&quot; poly service line from meter on property.'></textarea>
+      <button id="qcAddBtn">+ Add preset</button>
+    </div>
+  </div>
+</main>
+
+<main id="projectHousesView" style="display:none;">
+  <div class="category" style="border-top-color:var(--gasflag);">
+    <div class="cat-head">FIND NEARBY HOUSES</div>
+    <div class="block">
+      <button id="findHousesBtn" class="findbtn">📍 Find nearby houses</button>
+      <div id="phStatus" class="ph-status"></div>
+      <div id="phStreetLabel" class="block-label" style="display:none;">Street (tap to expand)</div>
+      <div id="phAccordion"></div>
+    </div>
+  </div>
+
+  <div class="category" style="border-top-color:var(--line);">
+    <div class="cat-head">ADD MANUALLY</div>
+    <div class="block">
+      <div class="customrow" style="padding:0 0 4px;">
+        <input id="phManualInput" placeholder='Not in the list? e.g. 129 Main St'>
+        <button id="phManualAddBtn">+</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="category" style="border-top-color:var(--gasflag);">
+    <div class="cat-head">SELECTED HOUSES <span class="tag" id="phCount"></span></div>
+    <div class="block">
+      <div id="phSelectedList" class="chipwrap"></div>
+      <div class="block-label">Hookup note (tap to edit)</div>
+      <textarea id="phPreview" class="ph-preview" rows="1">No houses selected yet.</textarea>
+      <div class="footer-row" style="padding-bottom:10px;">
+        <button class="copybtn" id="phCopyBtn">Copy hookup list</button>
+        <button class="clearbtn" id="phClearBtn">Clear list</button>
+      </div>
+      <div class="block-label" style="margin-top:6px;">Combined with Note Builder (tap to edit)</div>
+      <textarea id="phMergedPreview" class="ph-preview" rows="1">Select houses above to build a combined note.</textarea>
+      <div class="footer-row" style="padding-bottom:4px;">
+        <button class="copybtn" id="phMergedCopyBtn">Copy combined note</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer id="footerBar">
+  <div class="label">Generated note (tap to edit)</div>
+  <textarea id="preview" rows="1">Marked…</textarea>
+  <div class="footer-row">
+    <button class="copybtn" id="copyBtn">Copy note</button>
+    <button class="clearbtn" id="clearBtn">Clear</button>
+  </div>
+</footer>
+
+<script>
+const VERB = "Marked";
+const SIZES = ["1/2\"","3/4\"","1\"","1 1/4\"","2\"","4\"","6\"","8\"","10\"","12\""];
+const MODIFIERS = [
+  {key:'meter', label:'Meter nearby', noun:'meter', group:'nearby'},
+  {key:'meterprop', label:'Meter on property', noun:'meter', group:'onproperty'},
+  {key:'riser', label:'Riser nearby', noun:'riser', group:'nearby'},
+  {key:'testlead', label:'Testlead nearby', noun:'testlead', group:'nearby'},
+  {key:'tracerwire', label:'Tracerwire nearby', noun:'tracerwire', group:'nearby'},
+  {key:'regulator', label:'Regulator nearby', noun:'regulator', group:'nearby'}
+];
+const HP_WARNING = 'Whenever you dig within 5 feet of a high pressure line, you must schedule a "stand by" locator.';
+const ORIGINAL_DEFAULT_PRESETS = [
+  'Marked 1/2" poly service line and 2" poly mainline from meter on property.',
+  'Marked 3/4" steel service line and 1" steel mainline from meter on property.',
+  'No Conflict. Marked No NWN.',
+  'Marked 1/2" poly service line from meter on property.',
+  'Marked 3/4" steel service line from meter on property.'
+];
+const DEFAULT_PRESETS = [
+  ...ORIGINAL_DEFAULT_PRESETS,
+  `(Name),
+
+Just wanted to inform you there is a (size) Steel High Pressure NWN gas line within your dig area.
+
+Whenever you dig within 5 feet of a High Pressure line you must schedule a "stand by" locator.
+
+Please call NWN Dispatch to schedule this. 503-220-2415.
+
+Sincerely,`
+];
+
+const GITHUB_ISSUES_URL = 'https://github.com/paytonhussey76-rgb/Gas-Note-Builder/issues';
+
+const APP_VERSION = '1.4';
+const CHANGELOG = [
+  {
+    version: '1.4',
+    date: 'July 2026',
+    changes: [
+      'Abandoned now has Poly Markerball and Steel Markerball options alongside Poly and Steel — these read "by markerball" instead of "by measurement," and work exactly the same way (tap for single, tap again for multiple).',
+      'Every generated note (Note Builder, and both boxes on Project Houses) can now be tapped into and edited directly before copying — handy for one-off custom wording. Tapping a new selection afterward replaces the edit with the fresh auto-generated version, ready to edit again.'
+    ]
+  },
+  {
+    version: '1.3',
+    date: 'July 2026',
+    changes: [
+      'Added a new Quick Copy preset: the NWN High Pressure dig-area notification letter. It\'ll show up in everyone\'s Quick Copy list automatically — no need to re-add it yourself.',
+      'New default presets will now be delivered to your list automatically going forward, without touching or duplicating anything you\'ve already added or deleted.'
+    ]
+  },
+  {
+    version: '1.2',
+    date: 'July 2026',
+    changes: [
+      'Quick Copy presets can now be reordered with up/down arrows — tap the 🔒 lock icon in the header to unlock reordering, tap it again to lock it back.',
+      'Custom pipe sizes now also ask for confirmation before deleting, same as Quick Copy presets.',
+      'The Help button now shows a small dot when there\'s something new you haven\'t seen yet.'
+    ]
+  },
+  {
+    version: '1.1',
+    date: 'July 2026',
+    changes: [
+      'Note Builder now autosaves as you tap, so a reload or a dropped connection won\'t erase your progress.',
+      'Quick Copy presets now ask you to confirm before deleting — tap DEL, then tap "Sure? Tap again" to actually remove it.',
+      'Added version numbers and this What\'s New page to Help, so you can see what changed.'
+    ]
+  },
+  {
+    version: '1.0',
+    date: 'July 2026',
+    changes: [
+      'First release: tap-based Note Builder for Poly, Steel, and High Pressure sizes.',
+      'Poly pipe got its own "in casing" section so a plain and cased line of the same size can both be marked.',
+      'Added the Abandoned section, marked "by measurement."',
+      'High Pressure picks automatically add the standby locator safety reminder.',
+      'Added Quick Copy for saving and reusing your most common notes.',
+      'Added Project Houses: find nearby addresses by GPS, grouped by street, with manual add as a backup, plus a box to combine your house list with your Note Builder note.',
+      'Added offline support and a home-screen app icon.',
+      'Added the Help menu with guides, an install wizard, and a link to report issues.'
+    ]
+  }
+];
+
+const HELP_CONTENT = {
+  notebuilder: `
+    <div class="help-text">
+      <h4>The basics</h4>
+      <p>Tap a pipe size once to add it. Tap it <b>again</b> and it adds an "s" — that means you found more than one of that exact same size. Tap a third time to clear it.</p>
+      <h4>Poly in casing</h4>
+      <p>Poly has its own separate "in casing" section right below regular Poly. That way you can mark a regular poly line <b>and</b> a cased one of the same size at the same time, without them mixing up.</p>
+      <h4>High pressure</h4>
+      <p>Same tap system as everywhere else. Pick any High Pressure size and the note automatically adds the standby locator reminder at the end — you don't have to remember to type it yourself.</p>
+      <h4>Abandoned</h4>
+      <p>Choose Poly, Steel, Poly Markerball, or Steel Markerball, then tap sizes — tap again for multiple of that same size, same as everywhere else in the app. Regular Poly/Steel picks read "by measurement"; the Markerball options read "by markerball" instead, automatically.</p>
+      <h4>Notes</h4>
+      <p>Tap "Meter nearby," "Riser nearby," and so on to add context to your note. Tap it again to mark plural (more than one).</p>
+      <h4>Custom sizes</h4>
+      <p>Type a size that's not listed and hit <b>+</b> to add it. Remove it later with the <b>×</b> next to it — tap once, then tap "Sure?" to confirm.</p>
+      <h4>Copy note</h4>
+      <p>The note at the bottom updates live as you tap things, and you can tap right into it to edit or add custom wording before copying. Just know that tapping a new size or note afterward will replace your edit with the fresh auto-generated version, ready to edit again.</p>
+    </div>`,
+  quickcopy: `
+    <div class="help-text">
+      <h4>The basics</h4>
+      <p>Tap any preset card and it copies straight to your clipboard — nothing else to do, just paste it where you need it.</p>
+      <h4>Adding your own</h4>
+      <p>Don't see the one you need? Type it into the box at the bottom and tap <b>+ Add preset.</b> It'll remember it from then on, even after you close the app.</p>
+      <h4>Removing one</h4>
+      <p>Tap <b>DEL</b> on any preset card, then tap "Sure? Tap again" to confirm. It won't delete on the first tap.</p>
+      <h4>Reordering</h4>
+      <p>Tap the <b>🔒</b> lock icon in the header to unlock reordering — up/down arrows appear on each preset. Tap the lock again when you're done to prevent bumping the order by accident.</p>
+    </div>`,
+  projecthouses: `
+    <div class="help-text">
+      <h4>The basics</h4>
+      <p>Tap <b>Find nearby houses</b> — your phone will ask for location permission the first time, tap Allow.</p>
+      <h4>Streets</h4>
+      <p>Results are grouped by street. Tap a street to open it up and see the house numbers on it. Tap it again to close it.</p>
+      <h4>Selecting houses</h4>
+      <p>Tap a house number to add it to your list. Tap it again to remove it.</p>
+      <h4>Can't find a house?</h4>
+      <p>Type it into the box under "Add manually" — some areas aren't fully mapped online yet, so this always works as a backup.</p>
+      <h4>Copying the list</h4>
+      <p>Your selections build into "Hooked up at ___" automatically, and you can tap into either box to edit or add custom wording before copying. <b>Copy hookup list</b> grabs it, <b>Clear list</b> starts fresh for the next job. Tapping a new house or Note Builder change afterward replaces any edit with the fresh version.</p>
+      <h4>Combining with Note Builder</h4>
+      <p>Below your selected houses is a second box that merges your house list with whatever you've built in Note Builder into one combined note — handy when you want both in a single ticket. Tap <b>Copy combined note</b> to grab it. If Note Builder is still empty, it'll say so instead of leaving it blank.</p>
+    </div>`
+};
+
+const INSTALL_INSTRUCTIONS = {
+  'ios-safari': `<p><b>Step 1.</b> Tap the <b>Share</b> icon (square with an arrow pointing up) at the bottom of the Safari screen.</p><p><b>Step 2.</b> Scroll down the list and tap <b>"Add to Home Screen."</b></p><p><b>Step 3.</b> Tap <b>Add</b> in the top right.</p><p>The app icon now sits on your home screen like any other app.</p>`,
+  'ios-chrome': `<p><b>Step 1.</b> Tap the <b>Share</b> icon at the top of the Chrome screen.</p><p><b>Step 2.</b> Scroll down and tap <b>"Add to Home Screen."</b></p><p><b>Step 3.</b> Tap <b>Add.</b></p><p>If you don't see that option, open the page in Safari instead — it always supports this.</p>`,
+  'ios-other': `<p>Look for the <b>Share</b> icon in your browser (usually a square with an arrow, top or bottom of the screen).</p><p>Tap it, then look for <b>"Add to Home Screen"</b> in the list, tap it, then tap <b>Add.</b></p><p>If your browser doesn't have that option, open the page in <b>Safari</b> instead — it always works.</p>`,
+  'android-chrome': `<p><b>Step 1.</b> Tap the <b>⋮</b> (three dots) in the top right corner.</p><p><b>Step 2.</b> Tap <b>"Add to Home screen"</b> (sometimes shown as <b>"Install app"</b>).</p><p><b>Step 3.</b> Tap <b>Add / Install</b> to confirm.</p>`,
+  'android-samsung': `<p><b>Step 1.</b> Tap the menu icon (usually <b>☰</b> or <b>•••</b>) in Samsung Internet.</p><p><b>Step 2.</b> Look for <b>"Add page to"</b> and tap it.</p><p><b>Step 3.</b> Tap <b>"Home screen."</b></p>`,
+  'android-brave': `<p><b>Step 1.</b> Tap the <b>⋮</b> (three dots) in the top right corner.</p><p><b>Step 2.</b> Tap <b>"Add to Home Screen."</b></p><p><b>Step 3.</b> Confirm by tapping <b>Add.</b></p>`,
+  'android-firefox': `<p><b>Step 1.</b> Tap the <b>⋮</b> (three dots) in the top right corner.</p><p><b>Step 2.</b> Tap <b>"Install"</b> (or <b>"Add to Home screen"</b>).</p><p><b>Step 3.</b> Confirm.</p>`,
+  'android-other': `<p>Look in your browser's menu (usually three dots or lines) for <b>"Add to Home Screen"</b> or <b>"Install app."</b></p><p>If you can't find it, try switching to <b>Chrome</b> — it always supports this.</p>`
+};
+
+let helpOpen = false;
+let helpView = 'menu';
+let helpBrand = null;
+let helpBrowser = null;
+
+let currentTab = 'builder';
+let currentLt = { poly:'service', polyCasing:'service', steel:'service' };
+let currentAbandonedMat = 'poly';
+let selections = {
+  poly:{service:{}, mainline:{}},
+  steel:{service:{}, mainline:{}},
+  hp:{mainline:{}},
+  abandoned:{poly:{}, steel:{}, polyMarkerball:{}, steelMarkerball:{}}
+};
+let noteState = {};
+let customSizes = [];
+let quickPresets = [];
+let nearbyResults = [];
+let currentStreetFilter = null;
+let selectedHouses = [];
+let pendingDeleteIndex = null;
+let pendingDeleteTimer = null;
+let pendingSizeDelete = null;
+let pendingSizeDeleteTimer = null;
+let presetsLocked = true;
+let seenVersion = null;
+const SIZES_KEY = 'gas-note-builder-v2:custom-sizes';
+const PRESETS_KEY = 'gas-note-builder-v2:quick-presets';
+const DELIVERED_KEY = 'gas-note-builder-v2:delivered-defaults';
+let deliveredDefaults = [];
+const HOUSES_KEY = 'gas-note-builder-v2:project-houses';
+const BUILDER_STATE_KEY = 'gas-note-builder-v2:builder-state';
+const SEEN_VERSION_KEY = 'gas-note-builder-v2:seen-version';
+const OVERPASS_RADIUS_M = 150;
+
+async function loadSeenVersion(){
+  try{ seenVersion = localStorage.getItem(SEEN_VERSION_KEY); }catch(e){ /* none yet */ }
+}
+function markVersionSeen(){
+  seenVersion = APP_VERSION;
+  try{ localStorage.setItem(SEEN_VERSION_KEY, APP_VERSION); }catch(e){ console.error('save failed', e); }
+}
+function hasUnseenUpdate(){
+  return seenVersion !== APP_VERSION;
+}
+function updateHelpBadge(){
+  const badge = document.getElementById('helpBadge');
+  if(badge) badge.style.display = hasUnseenUpdate() ? 'block' : 'none';
+}
+
+async function loadBuilderState(){
+  try{
+    const raw = localStorage.getItem(BUILDER_STATE_KEY);
+    if(!raw) return;
+    const parsed = JSON.parse(raw);
+    if(!parsed || typeof parsed !== 'object') return;
+
+    const safeObj = (v) => (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
+    const s = safeObj(parsed.selections);
+
+    selections.poly.service = safeObj(safeObj(s.poly).service);
+    selections.poly.mainline = safeObj(safeObj(s.poly).mainline);
+    selections.steel.service = safeObj(safeObj(s.steel).service);
+    selections.steel.mainline = safeObj(safeObj(s.steel).mainline);
+    selections.hp.mainline = safeObj(safeObj(s.hp).mainline);
+    selections.abandoned.poly = safeObj(safeObj(s.abandoned).poly);
+    selections.abandoned.steel = safeObj(safeObj(s.abandoned).steel);
+    selections.abandoned.polyMarkerball = safeObj(safeObj(s.abandoned).polyMarkerball);
+    selections.abandoned.steelMarkerball = safeObj(safeObj(s.abandoned).steelMarkerball);
+
+    // Migrate very old poly entries that predate the "in casing" split, when they
+    // were stored as plain 'single'/'multiple' strings instead of {plain, casing} objects.
+    ['service','mainline'].forEach(lt=>{
+      const bucket = selections.poly[lt];
+      Object.keys(bucket).forEach(size=>{
+        const val = bucket[size];
+        if(typeof val === 'string'){
+          bucket[size] = { plain: val, casing: null };
+        } else if(!val || typeof val !== 'object'){
+          delete bucket[size];
+        }
+      });
+    });
+
+    const ns = safeObj(parsed.noteState);
+    if(Object.keys(ns).length) noteState = ns;
+  }catch(e){
+    console.error('Saved note data was corrupted — starting with a clean note instead of crashing:', e);
+  }
+}
+function saveBuilderState(){
+  try{ localStorage.setItem(BUILDER_STATE_KEY, JSON.stringify({selections, noteState})); }
+  catch(e){ console.error('save failed', e); }
+}
+
+async function loadSelectedHouses(){
+  try{
+    const raw = localStorage.getItem(HOUSES_KEY);
+    if(raw) selectedHouses = JSON.parse(raw);
+  }catch(e){ /* none yet */ }
+}
+async function saveSelectedHouses(){
+  try{ localStorage.setItem(HOUSES_KEY, JSON.stringify(selectedHouses)); }
+  catch(e){ console.error('save failed', e); }
+}
+
+async function loadCustomSizes(){
+  try{
+    const raw = localStorage.getItem(SIZES_KEY);
+    if(raw) customSizes = JSON.parse(raw);
+  }catch(e){ /* none yet */ }
+}
+async function saveCustomSizes(){
+  try{ localStorage.setItem(SIZES_KEY, JSON.stringify(customSizes)); }
+  catch(e){ console.error('save failed', e); }
+}
+async function loadPresets(){
+  try{
+    const raw = localStorage.getItem(PRESETS_KEY);
+    if(raw) quickPresets = JSON.parse(raw);
+  }catch(e){ /* none yet */ }
+
+  try{
+    const raw2 = localStorage.getItem(DELIVERED_KEY);
+    if(raw2){
+      deliveredDefaults = JSON.parse(raw2);
+    } else if(quickPresets.length){
+      // Existing user from before delivery-tracking existed — assume they
+      // already received the original defaults so we don't resurrect any
+      // they've since deleted.
+      deliveredDefaults = [...ORIGINAL_DEFAULT_PRESETS];
+    }
+  }catch(e){ /* none yet */ }
+
+  let changed = false;
+  DEFAULT_PRESETS.forEach(preset=>{
+    if(!deliveredDefaults.includes(preset)){
+      quickPresets.push(preset);
+      deliveredDefaults.push(preset);
+      changed = true;
+    }
+  });
+  if(changed){
+    await savePresets();
+    await saveDeliveredDefaults();
+  }
+}
+async function savePresets(){
+  try{ localStorage.setItem(PRESETS_KEY, JSON.stringify(quickPresets)); }
+  catch(e){ console.error('save failed', e); }
+}
+async function saveDeliveredDefaults(){
+  try{ localStorage.setItem(DELIVERED_KEY, JSON.stringify(deliveredDefaults)); }
+  catch(e){ console.error('save failed', e); }
+}
+
+function allSizes(){ return [...SIZES, ...customSizes]; }
+
+async function removeCustomSize(val){
+  customSizes = customSizes.filter(s => s !== val);
+  ['service','mainline'].forEach(lt=>{
+    delete selections.poly[lt][val];
+    delete selections.steel[lt][val];
+  });
+  delete selections.hp.mainline[val];
+  delete selections.abandoned.poly[val];
+  delete selections.abandoned.steel[val];
+  delete selections.abandoned.polyMarkerball[val];
+  delete selections.abandoned.steelMarkerball[val];
+  await saveCustomSizes();
+  render();
+}
+
+function requestRemoveCustomSize(val){
+  clearTimeout(pendingSizeDeleteTimer);
+  if(pendingSizeDelete === val){
+    pendingSizeDelete = null;
+    removeCustomSize(val);
+  } else {
+    pendingSizeDelete = val;
+    pendingSizeDeleteTimer = setTimeout(()=>{
+      pendingSizeDelete = null;
+      render();
+    }, 2500);
+    render();
+  }
+}
+
+function renderCustomSizeList(){
+  const wrap = document.getElementById('customSizeList');
+  wrap.innerHTML = '';
+  if(!customSizes.length) return;
+  const list = document.createElement('div');
+  list.className = 'customsize-list';
+  customSizes.forEach(val=>{
+    const item = document.createElement('div');
+    item.className = 'customsize-item';
+    const span = document.createElement('span');
+    span.textContent = val;
+    const del = document.createElement('button');
+    const pending = pendingSizeDelete === val;
+    del.className = pending ? 'confirm' : '';
+    del.textContent = pending ? 'Sure?' : '×';
+    del.onclick = ()=>{ requestRemoveCustomSize(val); };
+    item.appendChild(span);
+    item.appendChild(del);
+    list.appendChild(item);
+  });
+  wrap.appendChild(list);
+}
+
+function distanceMeters(lat1, lon1, lat2, lon2){
+  const R = 6371000;
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function houseKey(h){ return (h.housenumber||'') + '|' + (h.street||''); }
+function isHouseSelected(h){
+  const k = houseKey(h);
+  return selectedHouses.some(s => houseKey(s)===k);
+}
+function toggleHouseSelection(h){
+  const k = houseKey(h);
+  const idx = selectedHouses.findIndex(s => houseKey(s)===k);
+  if(idx>-1) selectedHouses.splice(idx,1);
+  else selectedHouses.push({housenumber:h.housenumber, street:h.street});
+  saveSelectedHouses();
+}
+function groupByStreet(results){
+  const groups = {};
+  const order = [];
+  results.forEach(h=>{
+    const key = h.street || '';
+    if(!groups[key]){ groups[key] = []; order.push(key); }
+    groups[key].push(h);
+  });
+  order.sort((a,b)=>{
+    const da = Math.min(...groups[a].map(h=>h.dist));
+    const db = Math.min(...groups[b].map(h=>h.dist));
+    return da - db;
+  });
+  return { groups, order };
+}
+
+function findNearbyHouses(){
+  const statusEl = document.getElementById('phStatus');
+  const btn = document.getElementById('findHousesBtn');
+  nearbyResults = [];
+  currentStreetFilter = null;
+  renderStreetAccordion();
+  if(!('geolocation' in navigator)){
+    statusEl.textContent = 'Location isn\'t available in this browser.';
+    return;
+  }
+  btn.disabled = true;
+  statusEl.textContent = 'Getting your location…';
+  navigator.geolocation.getCurrentPosition(async (pos)=>{
+    const { latitude, longitude } = pos.coords;
+    statusEl.textContent = 'Searching nearby addresses…';
+    try{
+      const query = `[out:json][timeout:25];(node["addr:housenumber"](around:${OVERPASS_RADIUS_M},${latitude},${longitude});way["addr:housenumber"](around:${OVERPASS_RADIUS_M},${latitude},${longitude}););out center tags;`;
+      const res = await fetch('https://overpass-api.de/api/interpreter', {
+        method:'POST',
+        body:'data=' + encodeURIComponent(query)
+      });
+      if(!res.ok) throw new Error('bad response');
+      const data = await res.json();
+      const seen = new Set();
+      const results = [];
+      (data.elements||[]).forEach(el=>{
+        const hn = el.tags && el.tags['addr:housenumber'];
+        if(!hn) return;
+        const street = el.tags['addr:street'] || '';
+        const key = hn + '|' + street;
+        if(seen.has(key)) return;
+        seen.add(key);
+        const lat = el.lat != null ? el.lat : (el.center ? el.center.lat : null);
+        const lon = el.lon != null ? el.lon : (el.center ? el.center.lon : null);
+        const dist = (lat!=null && lon!=null) ? distanceMeters(latitude, longitude, lat, lon) : Infinity;
+        results.push({ housenumber:hn, street, dist });
+      });
+      results.sort((a,b)=>a.dist-b.dist);
+      nearbyResults = results;
+      if(results.length){
+        currentStreetFilter = groupByStreet(results).order[0];
+      }
+      renderStreetAccordion();
+      statusEl.textContent = results.length
+        ? `Found ${results.length} nearby — closest first.`
+        : 'No addresses found nearby. This area may not be well-mapped — add manually below.';
+    }catch(e){
+      statusEl.textContent = 'Could not reach the address lookup. Check your connection and try again.';
+    }
+    btn.disabled = false;
+  }, (err)=>{
+    statusEl.textContent = 'Location permission denied or unavailable — enable location access and try again.';
+    btn.disabled = false;
+  }, { enableHighAccuracy:true, timeout:15000 });
+}
+
+async function copyTextRobust(text){
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  }catch(e){ /* fall through */ }
+  try{
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  }catch(e){ return false; }
+}
+
+function sizeStore(category, lt){
+  return category==='hp' ? selections.hp.mainline : selections[category][lt];
+}
+function cycleSize(category, lt, size){
+  const store = sizeStore(category, lt);
+  const cur = store[size];
+  if(!cur) store[size] = 'single';
+  else if(cur==='single') store[size] = 'multiple';
+  else delete store[size];
+}
+function cyclePolyField(lt, size, field){
+  const store = selections.poly[lt];
+  const entry = store[size] || {plain:null, casing:null};
+  const cur = entry[field];
+  if(!cur) entry[field] = 'single';
+  else if(cur==='single') entry[field] = 'multiple';
+  else entry[field] = null;
+  if(!entry.plain && !entry.casing) delete store[size];
+  else store[size] = entry;
+}
+function countIn(category, lt){
+  return Object.values(sizeStore(category, lt)).filter(Boolean).length;
+}
+function countInField(lt, field){
+  const store = selections.poly[lt];
+  return Object.values(store).filter(e => e && e[field]).length;
+}
+
+function renderLtRow(containerId, labels, getCurrent, setCurrent, counter){
+  const row = document.getElementById(containerId);
+  row.innerHTML = '';
+  labels.forEach(([key,label])=>{
+    const n = counter(key);
+    const b = document.createElement('button');
+    b.className = 'ltchip' + (getCurrent()===key ? ' active':'');
+    b.textContent = label + (n ? ` (${n})` : '');
+    b.onclick = ()=>{ setCurrent(key); render(); };
+    row.appendChild(b);
+  });
+}
+
+function chipBadges(st){
+  if(st!=='multiple') return '';
+  return '<span class="badge-s">s</span>';
+}
+
+function renderSizeGrid(containerId, category, lt){
+  const wrap = document.getElementById(containerId);
+  wrap.innerHTML = '';
+  const grid = document.createElement('div');
+  grid.className = 'chipwrap';
+  allSizes().forEach(size=>{
+    const st = sizeStore(category, lt)[size];
+    const b = document.createElement('button');
+    b.className = 'sizechip' + (st ? ' on '+category : '');
+    b.innerHTML = size + chipBadges(st);
+    b.onclick = ()=>{ cycleSize(category, lt, size); render(); };
+    grid.appendChild(b);
+  });
+  wrap.appendChild(grid);
+}
+
+function renderPolyFieldGrid(containerId, lt, field){
+  const wrap = document.getElementById(containerId);
+  wrap.innerHTML = '';
+  const grid = document.createElement('div');
+  grid.className = 'chipwrap';
+  allSizes().forEach(size=>{
+    const entry = selections.poly[lt][size] || {};
+    const st = entry[field];
+    const b = document.createElement('button');
+    b.className = 'sizechip' + (st ? ' on poly' : '');
+    b.innerHTML = size + chipBadges(st);
+    b.onclick = ()=>{ cyclePolyField(lt, size, field); render(); };
+    grid.appendChild(b);
+  });
+  wrap.appendChild(grid);
+}
+
+function renderAbandonedSizeGrid(){
+  const wrap = document.getElementById('abandonedSizes');
+  wrap.innerHTML = '';
+  const grid = document.createElement('div');
+  grid.className = 'chipwrap';
+  allSizes().forEach(size=>{
+    const store = selections.abandoned[currentAbandonedMat];
+    const st = store[size];
+    const b = document.createElement('button');
+    b.className = 'sizechip' + (st ? ' on abandoned' : '');
+    b.innerHTML = size + chipBadges(st);
+    b.onclick = ()=>{
+      if(!st) store[size] = 'single';
+      else if(st==='single') store[size] = 'multiple';
+      else delete store[size];
+      render();
+    };
+    grid.appendChild(b);
+  });
+  wrap.appendChild(grid);
+}
+
+function renderNotes(){
+  const wrap = document.getElementById('notewrap');
+  wrap.innerHTML = '';
+  MODIFIERS.forEach(m=>{
+    const b = document.createElement('button');
+    const st = noteState[m.key];
+    b.className = 'notechip' + (st ? ' on' : '') + (st==='multiple' ? ' multi' : '');
+    b.textContent = m.label + (st==='multiple' ? ' (s)' : '');
+    b.onclick = ()=>{
+      const cur = noteState[m.key];
+      if(!cur) noteState[m.key] = 'single';
+      else if(cur==='single') noteState[m.key] = 'multiple';
+      else delete noteState[m.key];
+      render();
+    };
+    wrap.appendChild(b);
+  });
+}
+
+function pluralNoun(noun, st){ return st==='multiple' ? noun+'s' : noun; }
+
+function buildNotesClause(){
+  const groups = {};
+  MODIFIERS.forEach(m=>{
+    const st = noteState[m.key];
+    if(!st) return;
+    if(!groups[m.group]) groups[m.group] = [];
+    groups[m.group].push(pluralNoun(m.noun, st));
+  });
+  return Object.entries(groups).map(([group, nouns])=>{
+    const joined = nouns.length===1 ? nouns[0]
+      : nouns.length===2 ? nouns.join(' and ')
+      : nouns.slice(0,-1).join(', ') + ' and ' + nouns[nouns.length-1];
+    const suffix = group==='nearby' ? 'nearby' : 'on property';
+    return `from ${joined} ${suffix}`;
+  });
+}
+
+function hasHighPressure(){
+  return Object.values(selections.hp.mainline).some(Boolean);
+}
+
+function buildItems(){
+  const items = [];
+  ['service','mainline'].forEach(lt=>{
+    Object.entries(selections.poly[lt]).forEach(([size,entry])=>{
+      if(!entry) return;
+      const base = `${size} poly ${lt==='service'?'service line':'mainline'}`;
+      if(entry.plain){
+        items.push(base + (entry.plain==='multiple' ? 's' : ''));
+      }
+      if(entry.casing){
+        items.push(base + (entry.casing==='multiple' ? 's' : '') + ' in casing');
+      }
+    });
+  });
+  ['service','mainline'].forEach(lt=>{
+    Object.entries(selections.steel[lt]).forEach(([size,count])=>{
+      if(!count) return;
+      let phrase = `${size} steel ${lt==='service'?'service line':'mainline'}`;
+      if(count==='multiple') phrase += 's';
+      items.push(phrase);
+    });
+  });
+  Object.entries(selections.hp.mainline).forEach(([size,count])=>{
+    if(!count) return;
+    let phrase = `${size} steel high pressure mainline`;
+    if(count==='multiple') phrase += 's';
+    items.push(phrase);
+  });
+  return items;
+}
+
+function buildAbandonedItemList(pairs){
+  const items = [];
+  pairs.forEach(([key,label])=>{
+    Object.entries(selections.abandoned[key]).forEach(([size,count])=>{
+      if(!count) return;
+      const word = count==='multiple' ? 'lines' : 'line';
+      items.push(`${size} ${label} ${word}`);
+    });
+  });
+  return items;
+}
+
+function buildAbandonedSentence(){
+  const sentences = [];
+
+  const measurementItems = buildAbandonedItemList([['poly','poly'],['steel','steel']]);
+  if(measurementItems.length){
+    const joined = measurementItems.length===1 ? measurementItems[0]
+      : measurementItems.slice(0,-1).join(', ') + ' and ' + measurementItems[measurementItems.length-1];
+    sentences.push(`Marked abandoned ${joined} by measurement.`);
+  }
+
+  const markerballItems = buildAbandonedItemList([['polyMarkerball','poly'],['steelMarkerball','steel']]);
+  if(markerballItems.length){
+    const joined = markerballItems.length===1 ? markerballItems[0]
+      : markerballItems.slice(0,-1).join(', ') + ' and ' + markerballItems[markerballItems.length-1];
+    sentences.push(`Marked abandoned ${joined} by markerball.`);
+  }
+
+  if(!sentences.length) return null;
+  return sentences.join(' ');
+}
+
+function buildHookupSentence(){
+  if(!selectedHouses.length) return null;
+  const groups = {};
+  const order = [];
+  selectedHouses.forEach(h=>{
+    const street = h.street || '';
+    if(!groups[street]){ groups[street] = []; order.push(street); }
+    groups[street].push(h.housenumber);
+  });
+  const streetPhrases = order.map(street=>{
+    const nums = groups[street];
+    const joined = nums.length===1 ? nums[0]
+      : nums.length===2 ? nums.join(' and ')
+      : nums.slice(0,-1).join(', ') + ' and ' + nums[nums.length-1];
+    return street ? `${joined} ${street}` : joined;
+  });
+  const joinedStreets = streetPhrases.length===1 ? streetPhrases[0]
+    : streetPhrases.slice(0,-1).join(', ') + ' and ' + streetPhrases[streetPhrases.length-1];
+  return `Hooked up at ${joinedStreets}.`;
+}
+
+function renderStreetAccordion(){
+  const labelEl = document.getElementById('phStreetLabel');
+  const wrap = document.getElementById('phAccordion');
+  wrap.innerHTML = '';
+  if(!nearbyResults.length){ labelEl.style.display = 'none'; return; }
+  labelEl.style.display = 'block';
+  const { groups, order } = groupByStreet(nearbyResults);
+  order.forEach(street=>{
+    const label = street || 'No street listed';
+    const isActive = currentStreetFilter === street;
+
+    const row = document.createElement('div');
+    row.className = 'street-row';
+
+    const header = document.createElement('button');
+    header.className = 'street-header' + (isActive ? ' active' : '');
+    header.innerHTML = `<span>${label} (${groups[street].length})</span><span class="chev">${isActive ? '▾' : '▸'}</span>`;
+    header.onclick = ()=>{ currentStreetFilter = isActive ? null : street; render(); };
+    row.appendChild(header);
+
+    if(isActive){
+      const housesWrap = document.createElement('div');
+      housesWrap.className = 'street-houses';
+      const grid = document.createElement('div');
+      grid.className = 'chipwrap';
+      const houses = groups[street].slice().sort((a,b)=>a.dist-b.dist);
+      houses.forEach(h=>{
+        const on = isHouseSelected(h);
+        const b = document.createElement('button');
+        b.className = 'sizechip' + (on ? ' on house' : '');
+        const distLabel = isFinite(h.dist) ? `${Math.round(h.dist)}m` : '';
+        b.innerHTML = h.housenumber + (distLabel ? `<span class="dist">${distLabel}</span>` : '');
+        b.onclick = (ev)=>{ ev.stopPropagation(); toggleHouseSelection(h); render(); };
+        grid.appendChild(b);
+      });
+      housesWrap.appendChild(grid);
+      row.appendChild(housesWrap);
+    }
+
+    wrap.appendChild(row);
+  });
+}
+
+function autoResizeTextarea(el){
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+
+let lastAutoText = {};
+function setEditableText(elId, autoText){
+  const el = document.getElementById(elId);
+  if(autoText !== lastAutoText[elId]){
+    el.value = autoText;
+    lastAutoText[elId] = autoText;
+    autoResizeTextarea(el);
+  }
+}
+
+function renderSelectedHouses(){
+  const wrap = document.getElementById('phSelectedList');
+  wrap.innerHTML = '';
+  selectedHouses.forEach(h=>{
+    const b = document.createElement('button');
+    b.className = 'sizechip on house';
+    b.textContent = h.street ? `${h.housenumber} ${h.street}` : h.housenumber;
+    b.onclick = ()=>{ toggleHouseSelection(h); render(); };
+    wrap.appendChild(b);
+  });
+  document.getElementById('phCount').textContent = selectedHouses.length ? `(${selectedHouses.length})` : '';
+  const sentence = buildHookupSentence();
+  setEditableText('phPreview', sentence || 'No houses selected yet.');
+  renderMergedPreview();
+}
+
+function renderMergedPreview(){
+  const merged = buildMergedHookupText();
+  setEditableText('phMergedPreview', merged || 'Select houses above to build a combined note.');
+}
+
+function buildNoteBuilderText(){
+  const items = buildItems();
+  const notePhrases = buildNotesClause();
+  if(notePhrases.length){
+    if(items.length) items[items.length-1] += ' ' + notePhrases.join(' and ');
+    else items.push(notePhrases.join(' and '));
+  }
+  const parts = [];
+  if(items.length){
+    const joined = items.length===1 ? items[0] : items.slice(0,-1).join(', ') + ' and ' + items[items.length-1];
+    parts.push(VERB + ' ' + joined + '.');
+  }
+  const abandonedSentence = buildAbandonedSentence();
+  if(abandonedSentence) parts.push(abandonedSentence);
+  if(!parts.length) return null;
+  let text = parts.join(' ');
+  if(hasHighPressure()) text += ' ' + HP_WARNING;
+  return text;
+}
+
+function buildMergedHookupText(){
+  if(!selectedHouses.length) return null;
+  const hookup = buildHookupSentence();
+  const noteText = buildNoteBuilderText();
+  if(!noteText){
+    return hookup + ' Nothing has been added to Note Builder yet.';
+  }
+  const hookupNoPeriod = hookup.replace(/\.\s*$/, '');
+  const lowerNote = noteText.charAt(0).toLowerCase() + noteText.slice(1);
+  return `${hookupNoPeriod} and ${lowerNote}`;
+}
+
+function renderPreview(){
+  const text = buildNoteBuilderText();
+  setEditableText('preview', text || (VERB + '… (tap sizes above to build your note)'));
+}
+
+function requestDeletePreset(idx){
+  clearTimeout(pendingDeleteTimer);
+  if(pendingDeleteIndex === idx){
+    quickPresets.splice(idx,1);
+    pendingDeleteIndex = null;
+    savePresets();
+    render();
+  } else {
+    pendingDeleteIndex = idx;
+    pendingDeleteTimer = setTimeout(()=>{
+      pendingDeleteIndex = null;
+      render();
+    }, 2500);
+    render();
+  }
+}
+
+function movePreset(idx, dir){
+  const newIdx = idx + dir;
+  if(newIdx < 0 || newIdx >= quickPresets.length) return;
+  const tmp = quickPresets[idx];
+  quickPresets[idx] = quickPresets[newIdx];
+  quickPresets[newIdx] = tmp;
+  savePresets();
+  render();
+}
+
+function renderQuickCopyList(){
+  const wrap = document.getElementById('qcList');
+  wrap.innerHTML = '';
+  quickPresets.forEach((text, idx)=>{
+    const card = document.createElement('button');
+    card.className = 'qc-card';
+
+    if(!presetsLocked){
+      const moveWrap = document.createElement('div');
+      moveWrap.className = 'qc-movewrap';
+      const upBtn = document.createElement('button');
+      upBtn.className = 'qc-move';
+      upBtn.textContent = '▲ Up';
+      upBtn.disabled = idx===0;
+      upBtn.onclick = (ev)=>{ ev.stopPropagation(); movePreset(idx, -1); };
+      const downBtn = document.createElement('button');
+      downBtn.className = 'qc-move';
+      downBtn.textContent = '▼ Down';
+      downBtn.disabled = idx===quickPresets.length-1;
+      downBtn.onclick = (ev)=>{ ev.stopPropagation(); movePreset(idx, 1); };
+      moveWrap.appendChild(upBtn);
+      moveWrap.appendChild(downBtn);
+      card.appendChild(moveWrap);
+    }
+
+    const textDiv = document.createElement('div');
+    textDiv.className = 'qc-text';
+    textDiv.textContent = text;
+    card.appendChild(textDiv);
+
+    const hintDiv = document.createElement('div');
+    hintDiv.className = 'qc-hint';
+    hintDiv.textContent = 'Tap to copy';
+    card.appendChild(hintDiv);
+
+    const del = document.createElement('button');
+    del.className = 'qc-del' + (pendingDeleteIndex===idx ? ' confirm' : '');
+    del.textContent = pendingDeleteIndex===idx ? 'Sure? Tap again' : 'DEL';
+    del.onclick = (ev)=>{
+      ev.stopPropagation();
+      requestDeletePreset(idx);
+    };
+    card.appendChild(del);
+    card.onclick = async ()=>{
+      const ok = await copyTextRobust(text);
+      const hint = card.querySelector('.qc-hint');
+      if(ok){
+        card.classList.add('copied');
+        hint.classList.add('copied');
+        hint.textContent = 'Copied ✓';
+      } else {
+        hint.textContent = 'Could not copy — long-press to select';
+      }
+      setTimeout(()=>{
+        card.classList.remove('copied');
+        hint.classList.remove('copied');
+        hint.textContent = 'Tap to copy';
+      }, 1600);
+    };
+    wrap.appendChild(card);
+  });
+}
+
+function helpGoBack(){
+  if(helpView==='install-browser'){ helpView='install-brand'; }
+  else if(helpView==='install-result'){ helpView='install-browser'; }
+  else { helpView='menu'; }
+  renderHelp();
+}
+
+function renderHelp(){
+  const overlay = document.getElementById('helpOverlay');
+  overlay.style.display = helpOpen ? 'flex' : 'none';
+  if(!helpOpen) return;
+
+  const titleEl = document.getElementById('helpPanelTitle');
+  const backBtn = document.getElementById('helpBackBtn');
+  const body = document.getElementById('helpPanelBody');
+  backBtn.style.display = helpView==='menu' ? 'none' : 'inline-block';
+
+  if(helpView==='menu'){
+    titleEl.textContent = 'Help';
+    body.innerHTML = `
+      <button class="help-menu-item" data-help="notebuilder"><span>📋 Note Builder</span><span class="arrow">›</span></button>
+      <button class="help-menu-item" data-help="quickcopy"><span>⚡ Quick Copy</span><span class="arrow">›</span></button>
+      <button class="help-menu-item" data-help="projecthouses"><span>📍 Project Houses</span><span class="arrow">›</span></button>
+      <button class="help-menu-item" data-help="install-brand"><span>📲 Install as an App</span><span class="arrow">›</span></button>
+      <button class="help-menu-item" data-help="whatsnew"><span>🆕 What's New</span><span class="arrow">›</span></button>
+      <a class="help-report" href="${GITHUB_ISSUES_URL}" target="_blank" rel="noopener">🐞 Report an issue</a>
+      <div style="text-align:center;color:var(--dim);font-size:11px;margin-top:14px;">Version ${APP_VERSION}</div>
+    `;
+    body.querySelectorAll('.help-menu-item').forEach(btn=>{
+      btn.onclick = ()=>{ helpView = btn.dataset.help; renderHelp(); };
+    });
+  } else if(helpView==='whatsnew'){
+    titleEl.textContent = "What's New";
+    body.innerHTML = `<div class="help-text">` + CHANGELOG.map(entry=>`
+      <h4>v${entry.version} — ${entry.date}</h4>
+      <ul>${entry.changes.map(c=>`<li>${c}</li>`).join('')}</ul>
+    `).join('') + `</div>`;
+    markVersionSeen();
+    updateHelpBadge();
+  } else if(HELP_CONTENT[helpView]){
+    const titles = { notebuilder:'Note Builder', quickcopy:'Quick Copy', projecthouses:'Project Houses' };
+    titleEl.textContent = titles[helpView];
+    body.innerHTML = HELP_CONTENT[helpView];
+  } else if(helpView==='install-brand'){
+    titleEl.textContent = 'Install as an App';
+    body.innerHTML = `
+      <div class="help-text"><p>What kind of phone are you using?</p></div>
+      <button class="help-menu-item" data-brand="iphone"><span>iPhone</span><span class="arrow">›</span></button>
+      <button class="help-menu-item" data-brand="samsung"><span>Samsung</span><span class="arrow">›</span></button>
+      <button class="help-menu-item" data-brand="pixel"><span>Google Pixel</span><span class="arrow">›</span></button>
+      <button class="help-menu-item" data-brand="other-android"><span>Other Android</span><span class="arrow">›</span></button>
+    `;
+    body.querySelectorAll('[data-brand]').forEach(btn=>{
+      btn.onclick = ()=>{ helpBrand = btn.dataset.brand; helpView='install-browser'; renderHelp(); };
+    });
+  } else if(helpView==='install-browser'){
+    titleEl.textContent = 'Install as an App';
+    let options;
+    if(helpBrand==='iphone'){
+      options = [['safari','Safari'],['chrome','Chrome'],['other','Other browser']];
+    } else if(helpBrand==='samsung'){
+      options = [['samsung','Samsung Internet'],['chrome','Chrome'],['brave','Brave'],['firefox','Firefox'],['other','Other browser']];
+    } else {
+      options = [['chrome','Chrome'],['samsung','Samsung Internet'],['brave','Brave'],['firefox','Firefox'],['other','Other browser']];
+    }
+    body.innerHTML = `<div class="help-text"><p>Which browser are you using?</p></div>` +
+      options.map(([key,label])=>`<button class="help-menu-item" data-browser="${key}"><span>${label}</span><span class="arrow">›</span></button>`).join('');
+    body.querySelectorAll('[data-browser]').forEach(btn=>{
+      btn.onclick = ()=>{ helpBrowser = btn.dataset.browser; helpView='install-result'; renderHelp(); };
+    });
+  } else if(helpView==='install-result'){
+    titleEl.textContent = 'Install as an App';
+    const os = helpBrand==='iphone' ? 'ios' : 'android';
+    const key = `${os}-${helpBrowser}`;
+    body.innerHTML = `<div class="help-text">${INSTALL_INSTRUCTIONS[key] || INSTALL_INSTRUCTIONS[os+'-other']}</div>`;
+  }
+}
+
+function render(){
+  renderLtRow('polyLt', [['service','Service line'],['mainline','Mainline']], ()=>currentLt.poly, (k)=>{currentLt.poly=k;}, (k)=>countInField(k,'plain'));
+  renderPolyFieldGrid('polySizes', currentLt.poly, 'plain');
+  renderLtRow('polyCasingLt', [['service','Service line'],['mainline','Mainline']], ()=>currentLt.polyCasing, (k)=>{currentLt.polyCasing=k;}, (k)=>countInField(k,'casing'));
+  renderPolyFieldGrid('polyCasingSizes', currentLt.polyCasing, 'casing');
+  renderLtRow('steelLt', [['service','Service line'],['mainline','Mainline']], ()=>currentLt.steel, (k)=>{currentLt.steel=k;}, (k)=>countIn('steel', k));
+  renderSizeGrid('steelSizes', 'steel', currentLt.steel);
+  renderSizeGrid('hpSizes', 'hp', 'mainline');
+  renderLtRow('abandonedMatRow', [['poly','Poly'],['steel','Steel'],['polyMarkerball','Poly Markerball'],['steelMarkerball','Steel Markerball']], ()=>currentAbandonedMat, (k)=>{currentAbandonedMat=k;}, (k)=>Object.values(selections.abandoned[k]).filter(Boolean).length);
+  document.getElementById('abandonedTag').textContent =
+    (currentAbandonedMat==='polyMarkerball' || currentAbandonedMat==='steelMarkerball') ? 'by markerball' : 'by measurement';
+  renderAbandonedSizeGrid();
+  renderCustomSizeList();
+  renderNotes();
+  renderPreview();
+  renderQuickCopyList();
+  renderStreetAccordion();
+  renderSelectedHouses();
+
+  document.getElementById('builderView').style.display = currentTab==='builder' ? '' : 'none';
+  document.getElementById('quickCopyView').style.display = currentTab==='quickcopy' ? '' : 'none';
+  document.getElementById('projectHousesView').style.display = currentTab==='projecthouses' ? '' : 'none';
+  document.getElementById('footerBar').style.display = currentTab==='builder' ? '' : 'none';
+  ['preview','phPreview','phMergedPreview'].forEach(id=>{
+    autoResizeTextarea(document.getElementById(id));
+  });
+  if(currentTab !== 'quickcopy') presetsLocked = true;
+  const lockBtn = document.getElementById('lockBtn');
+  lockBtn.style.display = currentTab==='quickcopy' ? '' : 'none';
+  lockBtn.textContent = presetsLocked ? '🔒' : '🔓';
+  lockBtn.classList.toggle('unlocked', !presetsLocked);
+  const titles = { builder:'Note Builder', quickcopy:'Quick Copy', projecthouses:'Project Houses' };
+  const subs = {
+    builder:'TAP SIZES → MULTI-SELECT → COPY',
+    quickcopy:'TAP A PRESET TO COPY',
+    projecthouses:'FIND & TAP NEARBY HOUSES'
+  };
+  document.getElementById('pageTitle').textContent = titles[currentTab];
+  document.getElementById('pageSub').textContent = subs[currentTab];
+  document.querySelectorAll('.menuitem').forEach(el=>{
+    el.classList.toggle('active', el.dataset.tab===currentTab);
+  });
+  syncFooterPadding();
+  saveBuilderState();
+  updateHelpBadge();
+}
+
+document.getElementById('menuBtn').onclick = ()=>{
+  const panel = document.getElementById('menuPanel');
+  panel.style.display = panel.style.display==='flex' ? 'none' : 'flex';
+};
+
+document.getElementById('helpBtn').onclick = ()=>{
+  helpOpen = true;
+  helpView = 'menu';
+  helpBrand = null;
+  helpBrowser = null;
+  renderHelp();
+};
+document.getElementById('lockBtn').onclick = ()=>{
+  presetsLocked = !presetsLocked;
+  render();
+};
+document.getElementById('helpCloseBtn').onclick = ()=>{ helpOpen = false; renderHelp(); };
+document.getElementById('helpBackBtn').onclick = helpGoBack;
+document.getElementById('helpOverlay').onclick = (ev)=>{
+  if(ev.target.id === 'helpOverlay'){ helpOpen = false; renderHelp(); }
+};
+document.querySelectorAll('.menuitem').forEach(el=>{
+  el.onclick = ()=>{
+    currentTab = el.dataset.tab;
+    document.getElementById('menuPanel').style.display = 'none';
+    render();
+  };
+});
+
+document.getElementById('addSizeBtn').onclick = async ()=>{
+  const input = document.getElementById('customSizeInput');
+  const msg = document.getElementById('customSizeMsg');
+  const val = input.value.trim();
+  if(!val) return;
+  if(allSizes().includes(val)){
+    msg.textContent = `"${val}" is already in the list.`;
+    setTimeout(()=>{ msg.textContent = ''; }, 2000);
+    return;
+  }
+  customSizes.push(val);
+  await saveCustomSizes();
+  input.value = '';
+  msg.textContent = '';
+  render();
+};
+
+document.getElementById('qcAddBtn').onclick = async ()=>{
+  const ta = document.getElementById('qcNewText');
+  const val = ta.value.trim();
+  if(!val) return;
+  quickPresets.push(val);
+  await savePresets();
+  ta.value = '';
+  render();
+};
+
+document.getElementById('findHousesBtn').onclick = findNearbyHouses;
+
+document.getElementById('phManualAddBtn').onclick = async ()=>{
+  const input = document.getElementById('phManualInput');
+  const val = input.value.trim();
+  if(!val) return;
+  const key = val + '|';
+  if(!selectedHouses.some(s => houseKey(s)===key)){
+    selectedHouses.push({ housenumber: val, street: '' });
+    await saveSelectedHouses();
+  }
+  input.value = '';
+  render();
+};
+
+document.getElementById('phCopyBtn').onclick = async ()=>{
+  const preview = document.getElementById('phPreview');
+  const text = preview.value;
+  const btn = document.getElementById('phCopyBtn');
+  const ok = await copyTextRobust(text);
+  if(ok){
+    btn.textContent = 'Copied ✓';
+    btn.classList.add('done');
+  } else {
+    preview.focus();
+    preview.select();
+    btn.textContent = 'Long-press to copy';
+  }
+  setTimeout(()=>{ btn.textContent='Copy hookup list'; btn.classList.remove('done'); }, 1800);
+};
+
+document.getElementById('phMergedCopyBtn').onclick = async ()=>{
+  const preview = document.getElementById('phMergedPreview');
+  const text = preview.value;
+  const btn = document.getElementById('phMergedCopyBtn');
+  const ok = await copyTextRobust(text);
+  if(ok){
+    btn.textContent = 'Copied ✓';
+    btn.classList.add('done');
+  } else {
+    preview.focus();
+    preview.select();
+    btn.textContent = 'Long-press to copy';
+  }
+  setTimeout(()=>{ btn.textContent='Copy combined note'; btn.classList.remove('done'); }, 1800);
+};
+
+document.getElementById('phClearBtn').onclick = async ()=>{
+  selectedHouses = [];
+  await saveSelectedHouses();
+  render();
+};
+
+document.getElementById('copyBtn').onclick = async ()=>{
+  const preview = document.getElementById('preview');
+  const text = preview.value;
+  const btn = document.getElementById('copyBtn');
+  const ok = await copyTextRobust(text);
+  if(ok){
+    btn.textContent = 'Copied ✓';
+    btn.classList.add('done');
+    setTimeout(()=>{ btn.textContent='Copy note'; btn.classList.remove('done'); }, 1600);
+  } else {
+    preview.focus();
+    preview.select();
+    btn.textContent = 'Long-press note to copy';
+    setTimeout(()=>{ btn.textContent='Copy note'; }, 2600);
+  }
+};
+
+document.getElementById('clearBtn').onclick = ()=>{
+  selections = {
+    poly:{service:{}, mainline:{}},
+    steel:{service:{}, mainline:{}},
+    hp:{mainline:{}},
+    abandoned:{poly:{}, steel:{}, polyMarkerball:{}, steelMarkerball:{}}
+  };
+  noteState = {};
+  render();
+};
+
+const footerEl = document.getElementById('footerBar');
+['preview','phPreview','phMergedPreview'].forEach(id=>{
+  const el = document.getElementById(id);
+  el.addEventListener('input', ()=>{
+    autoResizeTextarea(el);
+    if(id==='preview') syncFooterPadding();
+  });
+});
+function syncFooterPadding(){
+  document.body.style.paddingBottom = (footerEl.offsetHeight + 24) + 'px';
+}
+
+(async ()=>{
+  await loadCustomSizes();
+  await loadPresets();
+  await loadSelectedHouses();
+  await loadBuilderState();
+  await loadSeenVersion();
+  render();
+  if('ResizeObserver' in window){
+    new ResizeObserver(syncFooterPadding).observe(footerEl);
+  }
+  window.addEventListener('resize', syncFooterPadding);
+  syncFooterPadding();
+})();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{ /* offline support optional */ });
+  });
+}
+</script>
+</body>
+</html>
