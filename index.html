@@ -1373,6 +1373,9 @@ function render(){
   document.getElementById('quickCopyView').style.display = currentTab==='quickcopy' ? '' : 'none';
   document.getElementById('projectHousesView').style.display = currentTab==='projecthouses' ? '' : 'none';
   document.getElementById('footerBar').style.display = currentTab==='builder' ? '' : 'none';
+  ['preview','phPreview','phMergedPreview'].forEach(id=>{
+    autoResizeTextarea(document.getElementById(id));
+  });
   if(currentTab !== 'quickcopy') presetsLocked = true;
   const lockBtn = document.getElementById('lockBtn');
   lockBtn.style.display = currentTab==='quickcopy' ? '' : 'none';
