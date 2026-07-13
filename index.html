@@ -568,7 +568,16 @@ async function loadBuilderState(){
     const raw = localStorage.getItem(BUILDER_STATE_KEY);
     if(raw){
       const parsed = JSON.parse(raw);
-      if(parsed.selections) selections = parsed.selections;
+      const s = parsed.selections || {};
+      selections.poly.service = (s.poly && s.poly.service) || {};
+      selections.poly.mainline = (s.poly && s.poly.mainline) || {};
+      selections.steel.service = (s.steel && s.steel.service) || {};
+      selections.steel.mainline = (s.steel && s.steel.mainline) || {};
+      selections.hp.mainline = (s.hp && s.hp.mainline) || {};
+      selections.abandoned.poly = (s.abandoned && s.abandoned.poly) || {};
+      selections.abandoned.steel = (s.abandoned && s.abandoned.steel) || {};
+      selections.abandoned.polyMarkerball = (s.abandoned && s.abandoned.polyMarkerball) || {};
+      selections.abandoned.steelMarkerball = (s.abandoned && s.abandoned.steelMarkerball) || {};
       if(parsed.noteState) noteState = parsed.noteState;
     }
   }catch(e){ /* none yet */ }
