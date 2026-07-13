@@ -566,21 +566,42 @@ function updateHelpBadge(){
 async function loadBuilderState(){
   try{
     const raw = localStorage.getItem(BUILDER_STATE_KEY);
-    if(raw){
-      const parsed = JSON.parse(raw);
-      const s = parsed.selections || {};
-      selections.poly.service = (s.poly && s.poly.service) || {};
-      selections.poly.mainline = (s.poly && s.poly.mainline) || {};
-      selections.steel.service = (s.steel && s.steel.service) || {};
-      selections.steel.mainline = (s.steel && s.steel.mainline) || {};
-      selections.hp.mainline = (s.hp && s.hp.mainline) || {};
-      selections.abandoned.poly = (s.abandoned && s.abandoned.poly) || {};
-      selections.abandoned.steel = (s.abandoned && s.abandoned.steel) || {};
-      selections.abandoned.polyMarkerball = (s.abandoned && s.abandoned.polyMarkerball) || {};
-      selections.abandoned.steelMarkerball = (s.abandoned && s.abandoned.steelMarkerball) || {};
-      if(parsed.noteState) noteState = parsed.noteState;
-    }
-  }catch(e){ /* none yet */ }
+    if(!raw) return;
+    const parsed = JSON.parse(raw);
+    if(!parsed || typeof parsed !== 'object') return;
+
+    const safeObj = (v) => (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
+    const s = safeObj(parsed.selections);
+
+    selections.poly.service = safeObj(safeObj(s.poly).service);
+    selections.poly.mainline = safeObj(safeObj(s.poly).mainline);
+    selections.steel.service = safeObj(safeObj(s.steel).service);
+    selections.steel.mainline = safeObj(safeObj(s.steel).mainline);
+    selections.hp.mainline = safeObj(safeObj(s.hp).mainline);
+    selections.abandoned.poly = safeObj(safeObj(s.abandoned).poly);
+    selections.abandoned.steel = safeObj(safeObj(s.abandoned).steel);
+    selections.abandoned.polyMarkerball = safeObj(safeObj(s.abandoned).polyMarkerball);
+    selections.abandoned.steelMarkerball = safeObj(safeObj(s.abandoned).steelMarkerball);
+
+    // Migrate very old poly entries that predate the "in casing" split, when they
+    // were stored as plain 'single'/'multiple' strings instead of {plain, casing} objects.
+    ['service','mainline'].forEach(lt=>{
+      const bucket = selections.poly[lt];
+      Object.keys(bucket).forEach(size=>{
+        const val = bucket[size];
+        if(typeof val === 'string'){
+          bucket[size] = { plain: val, casing: null };
+        } else if(!val || typeof val !== 'object'){
+          delete bucket[size];
+        }
+      });
+    });
+
+    const ns = safeObj(parsed.noteState);
+    if(Object.keys(ns).length) noteState = ns;
+  }catch(e){
+    console.error('Saved note data was corrupted — starting with a clean note instead of crashing:', e);
+  }
 }
 function saveBuilderState(){
   try{ localStorage.setItem(BUILDER_STATE_KEY, JSON.stringify({selections, noteState})); }
