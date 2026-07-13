@@ -90,9 +90,9 @@
   .block{ padding:10px 14px 4px; }
   .block-label{ font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--dim); margin-bottom:8px; font-weight:600; }
 
-  .ltrow{ display:flex; gap:8px; margin-bottom:12px; }
+  .ltrow{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
   .ltchip{
-    flex:1; text-align:center; border:1px solid var(--line); background:var(--card); color:var(--dim);
+    flex:1 1 calc(50% - 4px); text-align:center; border:1px solid var(--line); background:var(--card); color:var(--dim);
     padding:8px 10px; border-radius:10px; font-size:12.5px;
   }
   .ltchip.active{ color:var(--ink); border-color:var(--ink); }
@@ -171,16 +171,23 @@
   .sizechip.on.house{ background:rgba(255,204,51,0.22); border-color:var(--gasflag); }
   .sizechip .dist{ display:block; font-size:9px; font-weight:400; color:var(--dim); margin-top:2px; }
   .ph-preview{
+    display:block; width:100%; box-sizing:border-box;
     font-size:14px; line-height:1.4; font-family:'Courier New',monospace;
     background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:12px;
+    color:var(--ink); resize:none; overflow:hidden; outline:none;
   }
+  .ph-preview:focus{ border-color:var(--gasflag); }
 
   footer{
     position:fixed; bottom:0; left:0; right:0; background:var(--paper); color:#1c1f22;
     padding:14px 16px 18px; border-top:3px solid var(--gasflag);
   }
   footer .label{ font-size:10px; text-transform:uppercase; letter-spacing:1.5px; color:#6b6456; margin-bottom:5px; font-weight:700; }
-  #preview{ font-size:14.5px; line-height:1.4; min-height:20px; margin-bottom:10px; font-family:'Courier New',monospace; }
+  #preview{
+    display:block; width:100%; box-sizing:border-box;
+    font-size:14.5px; line-height:1.4; min-height:20px; margin-bottom:10px; font-family:'Courier New',monospace;
+    background:none; border:none; outline:none; resize:none; overflow:hidden; color:#1c1f22; padding:0;
+  }
   .footer-row{ display:flex; gap:10px; }
   .copybtn{ flex:1; background:#1c1f22; color:var(--gasflag); border:none; padding:13px; border-radius:10px; font-size:14px; font-weight:700; }
   .copybtn.done{ color:#5fd66b; }
@@ -281,7 +288,7 @@
   </div>
 
   <div class="category abandoned">
-    <div class="cat-head">ABANDONED <span class="tag">by measurement</span></div>
+    <div class="cat-head">ABANDONED <span class="tag" id="abandonedTag">by measurement</span></div>
     <div class="block">
       <div id="abandonedMatRow" class="ltrow"></div>
       <div id="abandonedSizes"></div>
@@ -339,14 +346,14 @@
     <div class="cat-head">SELECTED HOUSES <span class="tag" id="phCount"></span></div>
     <div class="block">
       <div id="phSelectedList" class="chipwrap"></div>
-      <div class="block-label">Hookup note</div>
-      <div id="phPreview" class="ph-preview">No houses selected yet.</div>
+      <div class="block-label">Hookup note (tap to edit)</div>
+      <textarea id="phPreview" class="ph-preview" rows="1">No houses selected yet.</textarea>
       <div class="footer-row" style="padding-bottom:10px;">
         <button class="copybtn" id="phCopyBtn">Copy hookup list</button>
         <button class="clearbtn" id="phClearBtn">Clear list</button>
       </div>
-      <div class="block-label" style="margin-top:6px;">Combined with Note Builder</div>
-      <div id="phMergedPreview" class="ph-preview">Select houses above to build a combined note.</div>
+      <div class="block-label" style="margin-top:6px;">Combined with Note Builder (tap to edit)</div>
+      <textarea id="phMergedPreview" class="ph-preview" rows="1">Select houses above to build a combined note.</textarea>
       <div class="footer-row" style="padding-bottom:4px;">
         <button class="copybtn" id="phMergedCopyBtn">Copy combined note</button>
       </div>
@@ -355,8 +362,8 @@
 </main>
 
 <footer id="footerBar">
-  <div class="label">Generated note</div>
-  <div id="preview">Marked…</div>
+  <div class="label">Generated note (tap to edit)</div>
+  <textarea id="preview" rows="1">Marked…</textarea>
   <div class="footer-row">
     <button class="copybtn" id="copyBtn">Copy note</button>
     <button class="clearbtn" id="clearBtn">Clear</button>
@@ -397,8 +404,16 @@ Sincerely,`
 
 const GITHUB_ISSUES_URL = 'https://github.com/paytonhussey76-rgb/Gas-Note-Builder/issues';
 
-const APP_VERSION = '1.3';
+const APP_VERSION = '1.4';
 const CHANGELOG = [
+  {
+    version: '1.4',
+    date: 'July 2026',
+    changes: [
+      'Abandoned now has Poly Markerball and Steel Markerball options alongside Poly and Steel — these read "by markerball" instead of "by measurement," and work exactly the same way (tap for single, tap again for multiple).',
+      'Every generated note (Note Builder, and both boxes on Project Houses) can now be tapped into and edited directly before copying — handy for one-off custom wording. Tapping a new selection afterward replaces the edit with the fresh auto-generated version, ready to edit again.'
+    ]
+  },
   {
     version: '1.3',
     date: 'July 2026',
@@ -451,13 +466,13 @@ const HELP_CONTENT = {
       <h4>High pressure</h4>
       <p>Same tap system as everywhere else. Pick any High Pressure size and the note automatically adds the standby locator reminder at the end — you don't have to remember to type it yourself.</p>
       <h4>Abandoned</h4>
-      <p>Choose Poly or Steel first, then tap sizes — tap again for multiple of that same size, same as everywhere else in the app. It reads like "abandoned 1/2" poly line" (or "lines" if you tapped it twice), and always adds "by measurement" automatically.</p>
+      <p>Choose Poly, Steel, Poly Markerball, or Steel Markerball, then tap sizes — tap again for multiple of that same size, same as everywhere else in the app. Regular Poly/Steel picks read "by measurement"; the Markerball options read "by markerball" instead, automatically.</p>
       <h4>Notes</h4>
       <p>Tap "Meter nearby," "Riser nearby," and so on to add context to your note. Tap it again to mark plural (more than one).</p>
       <h4>Custom sizes</h4>
       <p>Type a size that's not listed and hit <b>+</b> to add it. Remove it later with the <b>×</b> next to it — tap once, then tap "Sure?" to confirm.</p>
       <h4>Copy note</h4>
-      <p>The note at the bottom updates live as you tap things. Hit <b>Copy note</b> anytime to grab it for pasting into your ticket.</p>
+      <p>The note at the bottom updates live as you tap things, and you can tap right into it to edit or add custom wording before copying. Just know that tapping a new size or note afterward will replace your edit with the fresh auto-generated version, ready to edit again.</p>
     </div>`,
   quickcopy: `
     <div class="help-text">
@@ -481,7 +496,7 @@ const HELP_CONTENT = {
       <h4>Can't find a house?</h4>
       <p>Type it into the box under "Add manually" — some areas aren't fully mapped online yet, so this always works as a backup.</p>
       <h4>Copying the list</h4>
-      <p>Your selections build into "Hooked up at ___" automatically. <b>Copy hookup list</b> grabs it, <b>Clear list</b> starts fresh for the next job.</p>
+      <p>Your selections build into "Hooked up at ___" automatically, and you can tap into either box to edit or add custom wording before copying. <b>Copy hookup list</b> grabs it, <b>Clear list</b> starts fresh for the next job. Tapping a new house or Note Builder change afterward replaces any edit with the fresh version.</p>
       <h4>Combining with Note Builder</h4>
       <p>Below your selected houses is a second box that merges your house list with whatever you've built in Note Builder into one combined note — handy when you want both in a single ticket. Tap <b>Copy combined note</b> to grab it. If Note Builder is still empty, it'll say so instead of leaving it blank.</p>
     </div>`
@@ -510,7 +525,7 @@ let selections = {
   poly:{service:{}, mainline:{}},
   steel:{service:{}, mainline:{}},
   hp:{mainline:{}},
-  abandoned:{poly:{}, steel:{}}
+  abandoned:{poly:{}, steel:{}, polyMarkerball:{}, steelMarkerball:{}}
 };
 let noteState = {};
 let customSizes = [];
@@ -635,6 +650,8 @@ async function removeCustomSize(val){
   delete selections.hp.mainline[val];
   delete selections.abandoned.poly[val];
   delete selections.abandoned.steel[val];
+  delete selections.abandoned.polyMarkerball[val];
+  delete selections.abandoned.steelMarkerball[val];
   await saveCustomSizes();
   render();
 }
@@ -965,18 +982,37 @@ function buildItems(){
   return items;
 }
 
-function buildAbandonedSentence(){
+function buildAbandonedItemList(pairs){
   const items = [];
-  ['poly','steel'].forEach(mat=>{
-    Object.entries(selections.abandoned[mat]).forEach(([size,count])=>{
+  pairs.forEach(([key,label])=>{
+    Object.entries(selections.abandoned[key]).forEach(([size,count])=>{
       if(!count) return;
       const word = count==='multiple' ? 'lines' : 'line';
-      items.push(`${size} ${mat} ${word}`);
+      items.push(`${size} ${label} ${word}`);
     });
   });
-  if(!items.length) return null;
-  const joined = items.length===1 ? items[0] : items.slice(0,-1).join(', ') + ' and ' + items[items.length-1];
-  return `Marked abandoned ${joined} by measurement.`;
+  return items;
+}
+
+function buildAbandonedSentence(){
+  const sentences = [];
+
+  const measurementItems = buildAbandonedItemList([['poly','poly'],['steel','steel']]);
+  if(measurementItems.length){
+    const joined = measurementItems.length===1 ? measurementItems[0]
+      : measurementItems.slice(0,-1).join(', ') + ' and ' + measurementItems[measurementItems.length-1];
+    sentences.push(`Marked abandoned ${joined} by measurement.`);
+  }
+
+  const markerballItems = buildAbandonedItemList([['polyMarkerball','poly'],['steelMarkerball','steel']]);
+  if(markerballItems.length){
+    const joined = markerballItems.length===1 ? markerballItems[0]
+      : markerballItems.slice(0,-1).join(', ') + ' and ' + markerballItems[markerballItems.length-1];
+    sentences.push(`Marked abandoned ${joined} by markerball.`);
+  }
+
+  if(!sentences.length) return null;
+  return sentences.join(' ');
 }
 
 function buildHookupSentence(){
@@ -1043,6 +1079,21 @@ function renderStreetAccordion(){
   });
 }
 
+function autoResizeTextarea(el){
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+
+let lastAutoText = {};
+function setEditableText(elId, autoText){
+  const el = document.getElementById(elId);
+  if(autoText !== lastAutoText[elId]){
+    el.value = autoText;
+    lastAutoText[elId] = autoText;
+    autoResizeTextarea(el);
+  }
+}
+
 function renderSelectedHouses(){
   const wrap = document.getElementById('phSelectedList');
   wrap.innerHTML = '';
@@ -1055,13 +1106,13 @@ function renderSelectedHouses(){
   });
   document.getElementById('phCount').textContent = selectedHouses.length ? `(${selectedHouses.length})` : '';
   const sentence = buildHookupSentence();
-  document.getElementById('phPreview').textContent = sentence || 'No houses selected yet.';
+  setEditableText('phPreview', sentence || 'No houses selected yet.');
   renderMergedPreview();
 }
 
 function renderMergedPreview(){
   const merged = buildMergedHookupText();
-  document.getElementById('phMergedPreview').textContent = merged || 'Select houses above to build a combined note.';
+  setEditableText('phMergedPreview', merged || 'Select houses above to build a combined note.');
 }
 
 function buildNoteBuilderText(){
@@ -1097,9 +1148,8 @@ function buildMergedHookupText(){
 }
 
 function renderPreview(){
-  const preview = document.getElementById('preview');
   const text = buildNoteBuilderText();
-  preview.textContent = text || (VERB + '… (tap sizes above to build your note)');
+  setEditableText('preview', text || (VERB + '… (tap sizes above to build your note)'));
 }
 
 function requestDeletePreset(idx){
@@ -1278,7 +1328,9 @@ function render(){
   renderLtRow('steelLt', [['service','Service line'],['mainline','Mainline']], ()=>currentLt.steel, (k)=>{currentLt.steel=k;}, (k)=>countIn('steel', k));
   renderSizeGrid('steelSizes', 'steel', currentLt.steel);
   renderSizeGrid('hpSizes', 'hp', 'mainline');
-  renderLtRow('abandonedMatRow', [['poly','Poly'],['steel','Steel']], ()=>currentAbandonedMat, (k)=>{currentAbandonedMat=k;}, (k)=>Object.values(selections.abandoned[k]).filter(Boolean).length);
+  renderLtRow('abandonedMatRow', [['poly','Poly'],['steel','Steel'],['polyMarkerball','Poly Markerball'],['steelMarkerball','Steel Markerball']], ()=>currentAbandonedMat, (k)=>{currentAbandonedMat=k;}, (k)=>Object.values(selections.abandoned[k]).filter(Boolean).length);
+  document.getElementById('abandonedTag').textContent =
+    (currentAbandonedMat==='polyMarkerball' || currentAbandonedMat==='steelMarkerball') ? 'by markerball' : 'by measurement';
   renderAbandonedSizeGrid();
   renderCustomSizeList();
   renderNotes();
@@ -1385,18 +1437,15 @@ document.getElementById('phManualAddBtn').onclick = async ()=>{
 
 document.getElementById('phCopyBtn').onclick = async ()=>{
   const preview = document.getElementById('phPreview');
-  const text = preview.textContent;
+  const text = preview.value;
   const btn = document.getElementById('phCopyBtn');
   const ok = await copyTextRobust(text);
   if(ok){
     btn.textContent = 'Copied ✓';
     btn.classList.add('done');
   } else {
-    const range = document.createRange();
-    range.selectNodeContents(preview);
-    const sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(range);
+    preview.focus();
+    preview.select();
     btn.textContent = 'Long-press to copy';
   }
   setTimeout(()=>{ btn.textContent='Copy hookup list'; btn.classList.remove('done'); }, 1800);
@@ -1404,18 +1453,15 @@ document.getElementById('phCopyBtn').onclick = async ()=>{
 
 document.getElementById('phMergedCopyBtn').onclick = async ()=>{
   const preview = document.getElementById('phMergedPreview');
-  const text = preview.textContent;
+  const text = preview.value;
   const btn = document.getElementById('phMergedCopyBtn');
   const ok = await copyTextRobust(text);
   if(ok){
     btn.textContent = 'Copied ✓';
     btn.classList.add('done');
   } else {
-    const range = document.createRange();
-    range.selectNodeContents(preview);
-    const sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(range);
+    preview.focus();
+    preview.select();
     btn.textContent = 'Long-press to copy';
   }
   setTimeout(()=>{ btn.textContent='Copy combined note'; btn.classList.remove('done'); }, 1800);
@@ -1429,7 +1475,7 @@ document.getElementById('phClearBtn').onclick = async ()=>{
 
 document.getElementById('copyBtn').onclick = async ()=>{
   const preview = document.getElementById('preview');
-  const text = preview.textContent;
+  const text = preview.value;
   const btn = document.getElementById('copyBtn');
   const ok = await copyTextRobust(text);
   if(ok){
@@ -1437,11 +1483,8 @@ document.getElementById('copyBtn').onclick = async ()=>{
     btn.classList.add('done');
     setTimeout(()=>{ btn.textContent='Copy note'; btn.classList.remove('done'); }, 1600);
   } else {
-    const range = document.createRange();
-    range.selectNodeContents(preview);
-    const sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(range);
+    preview.focus();
+    preview.select();
     btn.textContent = 'Long-press note to copy';
     setTimeout(()=>{ btn.textContent='Copy note'; }, 2600);
   }
@@ -1452,13 +1495,20 @@ document.getElementById('clearBtn').onclick = ()=>{
     poly:{service:{}, mainline:{}},
     steel:{service:{}, mainline:{}},
     hp:{mainline:{}},
-    abandoned:{poly:{}, steel:{}}
+    abandoned:{poly:{}, steel:{}, polyMarkerball:{}, steelMarkerball:{}}
   };
   noteState = {};
   render();
 };
 
 const footerEl = document.getElementById('footerBar');
+['preview','phPreview','phMergedPreview'].forEach(id=>{
+  const el = document.getElementById(id);
+  el.addEventListener('input', ()=>{
+    autoResizeTextarea(el);
+    if(id==='preview') syncFooterPadding();
+  });
+});
 function syncFooterPadding(){
   document.body.style.paddingBottom = (footerEl.offsetHeight + 24) + 'px';
 }
