@@ -222,6 +222,46 @@
     display:block; text-align:center; margin-top:10px; padding:12px; border-radius:12px;
     background:none; border:1px dashed var(--line); color:var(--dim); font-size:13px; text-decoration:none;
   }
+
+  .category.cantcomplete{ border-top-color:var(--danger); }
+  .notechip.on.cc{ background:rgba(255,107,107,0.16); border-color:var(--danger); color:var(--danger); }
+  .cc-stamp-row{ display:flex; align-items:center; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+  .cc-stamp{
+    font-family:'Courier New',monospace; font-size:12.5px; color:var(--gasflag);
+    background:var(--card); border:1px solid var(--line); border-radius:10px; padding:8px 12px;
+  }
+  .cc-stamp.unset{ color:var(--dim); }
+  .cc-timebtn{
+    background:var(--card); border:1px solid var(--gasflag); color:var(--gasflag);
+    padding:8px 12px; border-radius:10px; font-size:12px; font-weight:600;
+  }
+  .cc-log-item{
+    display:flex; align-items:center; gap:10px;
+    background:var(--card); border:1px solid var(--line); border-radius:10px;
+    padding:9px 12px; margin-bottom:7px; font-size:12.5px; color:var(--ink);
+  }
+  .cc-log-item .t{ color:var(--gasflag); font-family:'Courier New',monospace; font-size:11.5px; flex:0 0 auto; }
+  .cc-log-item .txt{ flex:1; min-width:0; }
+  .cc-log-item button{ background:none; border:none; color:var(--danger); font-size:16px; line-height:1; padding:2px 6px; flex:0 0 auto; }
+  .cc-copybtn{ flex:1; background:var(--gasflag); color:#1c1f22; border:none; padding:13px; border-radius:10px; font-size:14px; font-weight:700; }
+  .cc-copybtn.done{ background:#5fd66b; }
+  .cc-clearbtn{ background:none; border:1px solid var(--line); color:var(--dim); padding:13px 16px; border-radius:10px; font-size:13px; }
+
+  .hist-card{
+    background:var(--asphalt-2); border:1px solid var(--line); border-radius:12px;
+    padding:12px 14px; margin-bottom:10px; position:relative; text-align:left; width:100%;
+  }
+  .hist-card.copied{ border-color:#5fd66b; }
+  .hist-time{
+    font-size:10px; color:var(--gasflag); font-family:'Courier New',monospace;
+    letter-spacing:0.5px; margin-bottom:6px;
+  }
+  .hist-save{
+    position:absolute; top:8px; right:8px; background:none; border:1px solid var(--line);
+    color:var(--dim); font-size:10px; padding:4px 8px; border-radius:8px; font-weight:600;
+  }
+  .hist-save.saved{ border-color:#5fd66b; color:#5fd66b; }
+
 </style>
 </head>
 <body>
@@ -240,7 +280,10 @@
 
 <div class="menupanel" id="menuPanel">
   <button class="menuitem" data-tab="builder">Note Builder</button>
+  <button class="menuitem" data-tab="cantcomplete">No Access</button>
+  <button class="menuitem" data-tab="assistance">Assistance Needed</button>
   <button class="menuitem" data-tab="quickcopy">Quick Copy</button>
+  <button class="menuitem" data-tab="recentcopies">Recent Copies</button>
   <button class="menuitem" data-tab="projecthouses">Project Houses</button>
 </div>
 
@@ -306,6 +349,134 @@
     <div class="cat-head">NOTES</div>
     <div class="block">
       <div class="notewrap" id="notewrap"></div>
+    </div>
+  </div>
+</main>
+
+<main id="cantCompleteView" style="display:none;">
+  <div class="category cantcomplete">
+    <div class="cat-head">REASON <span class="tag">tap all that apply</span></div>
+    <div class="block">
+      <div class="cc-stamp-row">
+        <span class="cc-stamp unset" id="ccStamp">Time stamps on first tap</span>
+        <button class="cc-timebtn" id="ccUpdateTimeBtn">🕐 Set to now</button>
+      </div>
+      <div class="notewrap" id="ccReasonWrap"></div>
+    </div>
+  </div>
+
+  <div class="category" style="border-top-color:var(--line);">
+    <div class="cat-head">CONTACT ATTEMPTS <span class="tag">each tap logs the current time</span></div>
+    <div class="block">
+      <div class="notewrap" id="ccAttemptBtns" style="margin-bottom:12px;"></div>
+      <div id="ccAttemptLog"></div>
+    </div>
+  </div>
+
+  <div class="category" style="border-top-color:var(--line);">
+    <div class="cat-head">NEXT STEPS <span class="tag">optional — pick one</span></div>
+    <div class="block">
+      <div class="notewrap" id="ccNextWrap"></div>
+      <div id="ccDateLabel" class="block-label" style="display:none; margin-top:10px;">Re-attempt date (next 3 weeks)</div>
+      <div id="ccDateWrap"></div>
+    </div>
+  </div>
+
+  <div class="category cantcomplete">
+    <div class="cat-head">NO ACCESS NOTE</div>
+    <div class="block">
+      <div class="block-label">Generated note (tap to edit)</div>
+      <textarea id="ccPreview" class="ph-preview" rows="1">Tap a reason above to start your note.</textarea>
+      <div class="footer-row" style="padding-bottom:10px;">
+        <button class="cc-copybtn" id="ccCopyBtn">Copy note</button>
+        <button class="cc-clearbtn" id="ccClearBtn">Clear</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<main id="assistanceView" style="display:none;">
+  <div class="category" style="border-top-color:var(--gasflag);">
+    <div class="cat-head">TICKET <span class="tag">number goes in the subject line</span></div>
+    <div class="block">
+      <div class="customrow" style="padding:0 0 10px;">
+        <input id="asTicket" placeholder="Ticket number">
+      </div>
+      <div class="notewrap" id="asUrgencyWrap" style="margin-bottom:12px;"></div>
+      <div class="customrow" style="padding:0 0 4px;">
+        <input id="asAddress" placeholder="Address / intersection (e.g. lot 12 Main St, or A to B)">
+      </div>
+    </div>
+  </div>
+
+  <div class="category" style="border-top-color:var(--line);">
+    <div class="cat-head">THE ISSUE <span class="tag">what do you need help with?</span></div>
+    <div class="block">
+      <textarea id="asIssue" class="ph-preview" rows="2" placeholder="Describe the problem, e.g. can't get a clean signal on the steel main past the riser — need help confirming direction before I mark by measurement"></textarea>
+    </div>
+  </div>
+
+  <div class="category" style="border-top-color:var(--line);">
+    <div class="cat-head">PIPE INFO</div>
+    <div class="block">
+      <div class="ltrow" id="asMaterialRow"></div>
+      <div class="ltrow" id="asLinetypeRow"></div>
+      <div id="asSizes"></div>
+      <div class="customrow" style="padding:0 0 4px;">
+        <input id="asTransitions" placeholder="Transitions nearby? (e.g. steel to poly at riser)">
+      </div>
+    </div>
+  </div>
+
+  <div class="category" style="border-top-color:var(--line);">
+    <div class="cat-head">ACCESS POINTS &amp; FREQUENCIES <span class="tag">minimum 4, same material, opposite directions</span></div>
+    <div class="block">
+      <div class="customrow" style="padding:0 0 8px;">
+        <input id="asApLoc" placeholder="Location (e.g. riser at 121 Main, north side)">
+      </div>
+      <div class="customrow" style="padding:0 0 8px;">
+        <input id="asApFreq" placeholder="Frequencies tried (e.g. 512Hz, 8k, 65k)">
+        <button id="asApAddBtn">+</button>
+      </div>
+      <div id="asApCount" class="ph-status"></div>
+      <div id="asApList"></div>
+    </div>
+  </div>
+
+  <div class="category" style="border-top-color:var(--line);">
+    <div class="cat-head">TROUBLESHOOTING <span class="tag">tap everything you tried</span></div>
+    <div class="block">
+      <div class="notewrap" id="asMethodWrap" style="margin-bottom:12px;"></div>
+      <div class="block-label">Results</div>
+      <textarea id="asResults" class="ph-preview" rows="2" placeholder="What happened? (e.g. signal drops off approx 40ft from riser, bleed-off onto water line at 8k)"></textarea>
+      <div class="notewrap" id="asOngoingWrap"></div>
+    </div>
+  </div>
+
+  <div class="category" style="border-top-color:var(--gasflag);">
+    <div class="cat-head">ASSISTANCE EMAIL</div>
+    <div class="block">
+      <div class="block-label">Subject (tap to edit)</div>
+      <textarea id="asSubject" class="ph-preview" rows="1">Fill in the sections above.</textarea>
+      <div class="footer-row" style="padding-bottom:12px;">
+        <button class="cc-copybtn" id="asCopySubjectBtn">Copy subject</button>
+      </div>
+      <div class="block-label">Body (tap to edit)</div>
+      <textarea id="asBody" class="ph-preview" rows="1">Fill in the sections above to build your email.</textarea>
+      <div class="footer-row" style="padding-bottom:10px;">
+        <button class="cc-copybtn" id="asCopyBodyBtn">Copy body</button>
+        <button class="cc-clearbtn" id="asClearBtn">Clear</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<main id="recentCopiesView" style="display:none;">
+  <div class="category" style="border-top-color:var(--gasflag);">
+    <div class="cat-head">RECENT COPIES <span class="tag">last 10 — tap to copy again</span></div>
+    <div class="block">
+      <div id="histList"></div>
+      <div id="histEmpty" class="ph-status">Nothing copied yet — anything you copy in the app will show up here, so a note is never lost if the paste doesn't take.</div>
     </div>
   </div>
 </main>
@@ -382,6 +553,61 @@ const MODIFIERS = [
   {key:'regulator', label:'Regulator nearby', noun:'regulator', group:'nearby'}
 ];
 const HP_WARNING = 'Whenever you dig within 5 feet of a high pressure line, you must schedule a "stand by" locator.';
+
+const CC_REASONS = [
+  {key:'gate', label:'Locked gate', phrase:'locked gate'},
+  {key:'dog', label:'Dog in yard', phrase:'dog in yard'},
+  {key:'vehicle', label:'Vehicle over locate area', phrase:'vehicle parked over locate area'},
+  {key:'blocked', label:'Blocked by equipment/materials', phrase:'access blocked by equipment/materials'},
+  {key:'backyard', label:'No rear access', phrase:'no access to rear of property'},
+  {key:'gatecode', label:'No gate code', phrase:'gated community — no gate code provided'},
+  {key:'whiteline', label:'Not white-lined', phrase:'dig area not white-lined'},
+  {key:'unsafe', label:'Unsafe conditions', phrase:'unsafe conditions on site'},
+  {key:'construction', label:'Active construction over area', phrase:'active construction over locate area'},
+  {key:'meteraccess', label:'Meter/riser inaccessible', phrase:'meter/riser inaccessible'},
+  {key:'address', label:'Incorrect address', phrase:'incorrect address — unable to verify the ticket address on site'}
+];
+const CC_ATTEMPTS = [
+  {key:'call-vm', label:'📞 Called — left voicemail', phrase:'Called contractor at {time} — no answer, left voicemail.'},
+  {key:'call-novm', label:'📞 Called — no answer, no voicemail', phrase:'Called contractor at {time} — no answer, unable to leave voicemail.'},
+  {key:'call-spoke', label:'📞 Called — spoke with contact', phrase:'Called contractor at {time} and spoke with contact.'},
+  {key:'doortag', label:'🏷️ Left door tag', phrase:'Door tag filled out and placed on site at {time}.'},
+  {key:'email-1st', label:'📧 Emailed — 1st attempt notice', phrase:'Emailed contractor at {time} notifying them of the first attempt.'},
+  {key:'email-2nd', label:'📧 Emailed — 2nd/final attempt notice', phrase:'Emailed contractor at {time} notifying them of the second and final attempt — no locates have been done and a new ticket must be called in.'},
+  {key:'knock-no', label:'🚪 Knocked — no answer', phrase:'Knocked at door at {time} — no answer.'},
+  {key:'knock-spoke', label:'🚪 Knocked — spoke with resident', phrase:'Knocked at door at {time} and spoke with resident.'}
+];
+const CC_NEXT = [
+  {key:'reattempt', label:'📅 Will re-attempt [date]', phrase:null},
+  {key:'callback', label:'Contractor to call for re-mark', phrase:'Contractor to call for locate once site is accessible.'},
+  {key:'partial', label:'Marked accessible areas only', phrase:'Marked all accessible areas; remainder could not be located.'},
+  {key:'final', label:'2nd/final attempt — new ticket needed', phrase:'This was the second and final attempt. No locates have been done — contractor must call in a new ticket.'}
+];
+const WEEKDAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const WEEKDAYS_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+function joinAnd(arr){
+  return arr.length===1 ? arr[0]
+    : arr.length===2 ? arr.join(' and ')
+    : arr.slice(0,-1).join(', ') + ' and ' + arr[arr.length-1];
+}
+
+const AS_MATERIALS = [
+  {key:'poly', label:'Poly', phrase:'poly'},
+  {key:'steel', label:'Steel', phrase:'steel'},
+  {key:'hp', label:'Steel HP', phrase:'steel high pressure'}
+];
+const AS_LINETYPES = [
+  {key:'service', label:'Service line', phrase:'service line'},
+  {key:'mainline', label:'Mainline', phrase:'mainline'}
+];
+const AS_METHODS = [
+  {key:'ground', label:'Verified good grounding', phrase:'verified good grounding'},
+  {key:'sweep', label:'360 sweep', phrase:'completed 360 sweeps'},
+  {key:'highfreq', label:'Higher frequencies', phrase:'tried higher frequencies'},
+  {key:'backtrace', label:'Back-tracing', phrase:'back-traced from another access point'},
+  {key:'induction', label:'Induction', phrase:'attempted induction'},
+  {key:'prints', label:'Checked prints for measurements', phrase:'checked prints for measurements'}
+];
 const ORIGINAL_DEFAULT_PRESETS = [
   'Marked 1/2" poly service line and 2" poly mainline from meter on property.',
   'Marked 3/4" steel service line and 1" steel mainline from meter on property.',
@@ -404,8 +630,37 @@ Sincerely,`
 
 const GITHUB_ISSUES_URL = 'https://github.com/paytonhussey76-rgb/Gas-Note-Builder/issues';
 
-const APP_VERSION = '1.4';
+const APP_VERSION = '1.7';
 const CHANGELOG = [
+  {
+    version: '1.7',
+    date: 'July 2026',
+    changes: [
+      'Assistance Needed now has an "Issue" box so you can spell out exactly what you need help with — it goes near the top of the email, right under the address.',
+      'The assistance email is now split into a Subject field and a Body field with their own copy buttons, matching how your email app wants them entered — copy the subject into the subject line, the body into the message.'
+    ]
+  },
+  {
+    version: '1.6',
+    date: 'July 2026',
+    changes: [
+      'Can\'t Complete is now called No Access, matching the close-code language, and every "excavator" is now "contractor."',
+      'No Access: added "Incorrect address" as a reason, plus 🏷️ Left door tag and 📧 1st / 2nd-final attempt email buttons in Contact Attempts — everything the 2-attempt protocol requires, each logged with the time.',
+      'Next Steps: "📅 Will re-attempt [date]" now opens a 3-week calendar so the re-attempt date is written into the note; added "2nd/final attempt — new ticket needed" for closing out after the final attempt; removed the standby option (that has its own internal flow).',
+      'New Assistance Needed tab (☰ menu): builds the supervisor assistance email tap-by-tap — ticket number with DUE TODAY / EMERGENCY subject line, address, pipe info, access points with the 4-minimum counter, troubleshooting methods from the locate sheet, results, and the ongoing/contractor-notified line.',
+      'Recent Copies moved to its own tab in the ☰ menu.'
+    ]
+  },
+  {
+    version: '1.5',
+    date: 'July 2026',
+    changes: [
+      'New Can\'t Complete tab (☰ menu) for no-access tickets: tap the reason (locked gate, dog in yard, vehicle over the area, etc.) and it builds a note with the date and time stamped automatically — proof of when you attempted.',
+      'Contact attempts: tap "Called — left voicemail," "Knocked — no answer," and so on, and each one logs with the exact time. Tap × on any logged attempt to remove it.',
+      'Optional Next Steps line to close out the note ("Will re-attempt once access is provided," standby scheduling, and more).',
+      'Recent Copies: Quick Copy now keeps your last 10 copied notes from anywhere in the app — if a paste doesn\'t take in KorTerra, tap it there to copy again. Tap "+ Preset" on any of them to save it permanently.'
+    ]
+  },
   {
     version: '1.4',
     date: 'July 2026',
@@ -474,6 +729,49 @@ const HELP_CONTENT = {
       <h4>Copy note</h4>
       <p>The note at the bottom updates live as you tap things, and you can tap right into it to edit or add custom wording before copying. Just know that tapping a new size or note afterward will replace your edit with the fresh auto-generated version, ready to edit again.</p>
     </div>`,
+  cantcomplete: `
+    <div class="help-text">
+      <h4>What it's for</h4>
+      <p>When you can't complete a locate — locked gate, dog, blocked access, incorrect address — this builds a standardized note with the <b>date and time stamped automatically</b>, so there's a clear record of when you attempted and why it couldn't be done.</p>
+      <h4>Reasons</h4>
+      <p>Tap every reason that applies. The first tap stamps the attempt time. If you started the note earlier and want a fresh stamp, tap <b>🕐 Set to now.</b></p>
+      <h4>Contact attempts</h4>
+      <p>Tap a button each time you make contact or leave notice — calls, door tag, and the 1st and 2nd attempt emails all log with the exact time, so "Called contractor at 9:32 AM — no answer, left voicemail" is one tap. Tap <b>×</b> on any logged attempt to remove it.</p>
+      <h4>The 2-attempt protocol</h4>
+      <p><b>1st attempt:</b> site photo, door tag placed on site, email to contractor, phone call to contractor — the 🏷️ door tag, 📧 1st attempt email, and 📞 call buttons cover the note for all of it. <b>2nd attempt:</b> site photo and the 📧 2nd/final attempt email, which automatically includes that no locates have been done and a new ticket must be called in. We never make more than 2 attempts.</p>
+      <h4>Next steps</h4>
+      <p>Optional closing line — pick one, tap it again to remove it. <b>📅 Will re-attempt [date]</b> opens a 3-week calendar; tap the date you'll be back and it writes itself into the note (e.g. "Will re-attempt Tuesday 7/14"). On your second and final attempt, use <b>2nd/final attempt — new ticket needed</b> instead.</p>
+      <h4>Copy &amp; Clear</h4>
+      <p>The note is editable before copying, same as everywhere else in the app. <b>Clear</b> wipes everything including the time stamp, ready for the next ticket.</p>
+    </div>`,
+  assistance: `
+    <div class="help-text">
+      <h4>What it's for</h4>
+      <p>Builds the assistance email your supervisor expects when you're stuck on a locate — every required section, in order, without typing it from scratch in the field.</p>
+      <h4>Ticket &amp; subject line</h4>
+      <p>Type the ticket number, then tap <b>⏰ Due today</b> or <b>🚨 Emergency ticket</b> if either applies — that puts it in the subject line automatically, as required.</p>
+      <h4>The issue</h4>
+      <p>Spell out what you actually need help with in the Issue box — this is the heart of the email. It lands near the top, right under the address, so whoever reads it knows the problem before the details.</p>
+      <h4>Pipe info</h4>
+      <p>Tap the material, line type, and size, and note any transitions nearby in the box.</p>
+      <h4>Access points</h4>
+      <p>Type where you hooked up and what frequencies you tried, then tap <b>+</b> to add it to the list. You need <b>at least 4 access points of the same material, from opposite directions</b> — the counter under the box keeps track for you.</p>
+      <h4>Troubleshooting</h4>
+      <p>Tap everything you tried (these match the troubleshooting order on the locate sheet: grounding, 360 sweeps, higher frequencies, back-tracing, induction, prints). Then describe what actually happened in the Results box — where the signal drops, bleed-off, anything useful.</p>
+      <h4>Ongoing</h4>
+      <p>If you put the ticket into ongoing, tap the ongoing chip — it adds the line confirming the contractor was notified of the trouble area.</p>
+      <h4>Copy</h4>
+      <p>The subject and body are separate fields, each with its own copy button and both editable before you copy. Copy the subject into your email's subject line, and the body into the message.</p>
+    </div>`,
+  recentcopies: `
+    <div class="help-text">
+      <h4>What it's for</h4>
+      <p>Every note you copy anywhere in the app — Note Builder, No Access, Assistance emails, presets, hookup lists — lands here, newest first, up to the last 10.</p>
+      <h4>If a paste doesn't take</h4>
+      <p>KorTerra ate your paste? Come here and tap the note to copy it again instead of rebuilding it from scratch.</p>
+      <h4>Save as preset</h4>
+      <p>Tap <b>+ Preset</b> on any note to save it to your Quick Copy presets permanently.</p>
+    </div>`,
   quickcopy: `
     <div class="help-text">
       <h4>The basics</h4>
@@ -484,6 +782,8 @@ const HELP_CONTENT = {
       <p>Tap <b>DEL</b> on any preset card, then tap "Sure? Tap again" to confirm. It won't delete on the first tap.</p>
       <h4>Reordering</h4>
       <p>Tap the <b>🔒</b> lock icon in the header to unlock reordering — up/down arrows appear on each preset. Tap the lock again when you're done to prevent bumping the order by accident.</p>
+      <h4>Recent copies</h4>
+      <p>Your last 10 copied notes now live in their own <b>Recent Copies</b> tab in the ☰ menu — if a paste doesn't take in KorTerra, grab the note again from there.</p>
     </div>`,
   projecthouses: `
     <div class="help-text">
@@ -546,7 +846,102 @@ let deliveredDefaults = [];
 const HOUSES_KEY = 'gas-note-builder-v2:project-houses';
 const BUILDER_STATE_KEY = 'gas-note-builder-v2:builder-state';
 const SEEN_VERSION_KEY = 'gas-note-builder-v2:seen-version';
+const CC_STATE_KEY = 'gas-note-builder-v2:cant-complete';
+const HISTORY_KEY = 'gas-note-builder-v2:copy-history';
 const OVERPASS_RADIUS_M = 150;
+
+let ccState = { reasons:{}, attempts:[], next:null, stamp:null, reattemptAt:null };
+let asState = { ticket:'', urgency:null, address:'', issue:'', material:null, linetype:null, sizes:{}, transitions:'', accessPoints:[], methods:{}, results:'', ongoing:false };
+const AS_STATE_KEY = 'gas-note-builder-v2:assistance';
+async function loadAsState(){
+  try{
+    const raw = localStorage.getItem(AS_STATE_KEY);
+    if(!raw) return;
+    const p = JSON.parse(raw);
+    if(!p || typeof p !== 'object') return;
+    asState.ticket = typeof p.ticket==='string' ? p.ticket : '';
+    asState.urgency = typeof p.urgency==='string' ? p.urgency : null;
+    asState.address = typeof p.address==='string' ? p.address : '';
+    asState.issue = typeof p.issue==='string' ? p.issue : '';
+    asState.material = typeof p.material==='string' ? p.material : null;
+    asState.linetype = typeof p.linetype==='string' ? p.linetype : null;
+    asState.sizes = (p.sizes && typeof p.sizes==='object') ? p.sizes : {};
+    asState.transitions = typeof p.transitions==='string' ? p.transitions : '';
+    asState.accessPoints = Array.isArray(p.accessPoints) ? p.accessPoints : [];
+    asState.methods = (p.methods && typeof p.methods==='object') ? p.methods : {};
+    asState.results = typeof p.results==='string' ? p.results : '';
+    asState.ongoing = !!p.ongoing;
+  }catch(e){ /* start clean */ }
+}
+function saveAsState(){
+  try{ localStorage.setItem(AS_STATE_KEY, JSON.stringify(asState)); }
+  catch(e){ console.error('save failed', e); }
+}
+let copyHistory = [];
+let histSavedFlash = null;
+
+function fmtTime(ms){
+  const d = new Date(ms);
+  let h = d.getHours();
+  const m = String(d.getMinutes()).padStart(2,'0');
+  const ap = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return `${h}:${m} ${ap}`;
+}
+function fmtDate(ms){
+  const d = new Date(ms);
+  return `${d.getMonth()+1}/${d.getDate()}`;
+}
+function isSameDay(ms){
+  const a = new Date(ms), b = new Date();
+  return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+}
+
+async function loadCcState(){
+  try{
+    const raw = localStorage.getItem(CC_STATE_KEY);
+    if(!raw) return;
+    const parsed = JSON.parse(raw);
+    if(!parsed || typeof parsed !== 'object') return;
+    ccState.reasons = (parsed.reasons && typeof parsed.reasons === 'object') ? parsed.reasons : {};
+    ccState.attempts = Array.isArray(parsed.attempts) ? parsed.attempts : [];
+    ccState.next = typeof parsed.next === 'string' ? parsed.next : null;
+    ccState.stamp = typeof parsed.stamp === 'number' ? parsed.stamp : null;
+    ccState.reattemptAt = typeof parsed.reattemptAt === 'number' ? parsed.reattemptAt : null;
+    // A re-attempt date that has already passed shouldn't linger in the note.
+    if(ccState.reattemptAt){
+      const today = new Date(); today.setHours(0,0,0,0);
+      if(ccState.reattemptAt < today.getTime()) ccState.reattemptAt = null;
+    }
+  }catch(e){ /* start clean */ }
+}
+function saveCcState(){
+  try{ localStorage.setItem(CC_STATE_KEY, JSON.stringify(ccState)); }
+  catch(e){ console.error('save failed', e); }
+}
+
+async function loadCopyHistory(){
+  try{
+    const raw = localStorage.getItem(HISTORY_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      if(Array.isArray(parsed)) copyHistory = parsed.filter(h => h && typeof h.text === 'string');
+    }
+  }catch(e){ /* none yet */ }
+}
+function saveCopyHistory(){
+  try{ localStorage.setItem(HISTORY_KEY, JSON.stringify(copyHistory)); }
+  catch(e){ console.error('save failed', e); }
+}
+function recordCopy(text){
+  const t = (text || '').trim();
+  if(!t) return;
+  copyHistory = copyHistory.filter(h => h.text !== t);
+  copyHistory.unshift({ text: t, at: Date.now() });
+  if(copyHistory.length > 10) copyHistory.length = 10;
+  saveCopyHistory();
+  renderCopyHistory();
+}
 
 async function loadSeenVersion(){
   try{ seenVersion = localStorage.getItem(SEEN_VERSION_KEY); }catch(e){ /* none yet */ }
@@ -1182,6 +1577,344 @@ function renderPreview(){
   setEditableText('preview', text || (VERB + '… (tap sizes above to build your note)'));
 }
 
+function buildCantCompleteText(){
+  const parts = [];
+  const phrases = CC_REASONS.filter(r => ccState.reasons[r.key]).map(r => r.phrase);
+  if(phrases.length){
+    const joined = phrases.length===1 ? phrases[0]
+      : phrases.slice(0,-1).join(', ') + ' and ' + phrases[phrases.length-1];
+    const stamp = ccState.stamp || Date.now();
+    parts.push(`Attempted locate ${fmtDate(stamp)} at ${fmtTime(stamp)} — unable to complete: ${joined}.`);
+  }
+  ccState.attempts.forEach(a => {
+    const def = CC_ATTEMPTS.find(x => x.key === a.key);
+    if(def) parts.push(def.phrase.replace('{time}', fmtTime(a.at)));
+  });
+  if(ccState.next === 'reattempt'){
+    if(ccState.reattemptAt){
+      const d = new Date(ccState.reattemptAt);
+      parts.push(`Will re-attempt ${WEEKDAYS[d.getDay()]} ${d.getMonth()+1}/${d.getDate()}.`);
+    } else {
+      parts.push('Will re-attempt.');
+    }
+  } else if(ccState.next){
+    const n = CC_NEXT.find(x => x.key === ccState.next);
+    if(n && n.phrase) parts.push(n.phrase);
+  }
+  return parts.length ? parts.join(' ') : null;
+}
+
+function renderCantComplete(){
+  const stampEl = document.getElementById('ccStamp');
+  if(ccState.stamp){
+    stampEl.textContent = `Attempt time: ${fmtDate(ccState.stamp)} ${fmtTime(ccState.stamp)}`;
+    stampEl.classList.remove('unset');
+  } else {
+    stampEl.textContent = 'Time stamps on first tap';
+    stampEl.classList.add('unset');
+  }
+
+  const reasonWrap = document.getElementById('ccReasonWrap');
+  reasonWrap.innerHTML = '';
+  CC_REASONS.forEach(r => {
+    const on = !!ccState.reasons[r.key];
+    const b = document.createElement('button');
+    b.className = 'notechip' + (on ? ' on cc' : '');
+    b.textContent = r.label;
+    b.onclick = () => {
+      if(on) delete ccState.reasons[r.key];
+      else {
+        ccState.reasons[r.key] = true;
+        if(!ccState.stamp) ccState.stamp = Date.now();
+      }
+      render();
+    };
+    reasonWrap.appendChild(b);
+  });
+
+  const attemptBtns = document.getElementById('ccAttemptBtns');
+  attemptBtns.innerHTML = '';
+  CC_ATTEMPTS.forEach(a => {
+    const b = document.createElement('button');
+    b.className = 'notechip';
+    b.textContent = a.label;
+    b.onclick = () => {
+      ccState.attempts.push({ key: a.key, at: Date.now() });
+      if(!ccState.stamp) ccState.stamp = Date.now();
+      render();
+    };
+    attemptBtns.appendChild(b);
+  });
+
+  const log = document.getElementById('ccAttemptLog');
+  log.innerHTML = '';
+  ccState.attempts.forEach((a, idx) => {
+    const def = CC_ATTEMPTS.find(x => x.key === a.key);
+    if(!def) return;
+    const item = document.createElement('div');
+    item.className = 'cc-log-item';
+    const t = document.createElement('span');
+    t.className = 't';
+    t.textContent = fmtTime(a.at);
+    const txt = document.createElement('span');
+    txt.className = 'txt';
+    txt.textContent = def.label.replace(/^[^ ]+ /, '');
+    const del = document.createElement('button');
+    del.textContent = '×';
+    del.onclick = () => { ccState.attempts.splice(idx, 1); render(); };
+    item.appendChild(t);
+    item.appendChild(txt);
+    item.appendChild(del);
+    log.appendChild(item);
+  });
+
+  const nextWrap = document.getElementById('ccNextWrap');
+  nextWrap.innerHTML = '';
+  CC_NEXT.forEach(n => {
+    const on = ccState.next === n.key;
+    const b = document.createElement('button');
+    b.className = 'notechip' + (on ? ' on' : '');
+    let label = n.label;
+    if(n.key === 'reattempt' && on && ccState.reattemptAt){
+      const d = new Date(ccState.reattemptAt);
+      label = `📅 Will re-attempt ${WEEKDAYS_SHORT[d.getDay()]} ${d.getMonth()+1}/${d.getDate()}`;
+    }
+    b.textContent = label;
+    b.onclick = () => {
+      ccState.next = on ? null : n.key;
+      if(ccState.next !== 'reattempt') ccState.reattemptAt = null;
+      render();
+    };
+    nextWrap.appendChild(b);
+  });
+
+  const dateLabel = document.getElementById('ccDateLabel');
+  const dateWrap = document.getElementById('ccDateWrap');
+  dateWrap.innerHTML = '';
+  const showDates = ccState.next === 'reattempt';
+  dateLabel.style.display = showDates ? 'block' : 'none';
+  if(showDates){
+    const grid = document.createElement('div');
+    grid.className = 'chipwrap';
+    const base = new Date();
+    base.setHours(12,0,0,0);
+    for(let i=1; i<=21; i++){
+      const d = new Date(base.getTime() + i*86400000);
+      const on = ccState.reattemptAt != null && new Date(ccState.reattemptAt).toDateString() === d.toDateString();
+      const b = document.createElement('button');
+      b.className = 'sizechip' + (on ? ' on house' : '');
+      b.innerHTML = `${d.getMonth()+1}/${d.getDate()}<span class="dist">${WEEKDAYS_SHORT[d.getDay()]}</span>`;
+      b.onclick = () => {
+        ccState.reattemptAt = on ? null : d.getTime();
+        render();
+      };
+      grid.appendChild(b);
+    }
+    dateWrap.appendChild(grid);
+  }
+
+  const text = buildCantCompleteText();
+  setEditableText('ccPreview', text || 'Tap a reason above to start your note.');
+}
+
+function buildAssistance(){
+  const body = [];
+  if(asState.address.trim()) body.push('Address/Intersection: ' + asState.address.trim());
+  if(asState.issue.trim()) body.push('Issue: ' + asState.issue.trim());
+
+  const sizes = allSizes().filter(s => asState.sizes[s]);
+  const mat = AS_MATERIALS.find(m => m.key === asState.material);
+  const lt = AS_LINETYPES.find(l => l.key === asState.linetype);
+  const pipeBits = [sizes.join(', '), mat ? mat.phrase : '', lt ? lt.phrase : ''].filter(Boolean);
+  if(pipeBits.length || asState.transitions.trim()){
+    let pipe = pipeBits.join(' ');
+    if(asState.transitions.trim()){
+      pipe += (pipe ? '; ' : '') + 'transitions nearby: ' + asState.transitions.trim();
+    }
+    body.push('Pipe info: ' + pipe);
+  }
+
+  if(asState.accessPoints.length){
+    body.push('Access points & frequencies:');
+    asState.accessPoints.forEach((ap, i) => {
+      body.push(`${i+1}. ${ap.loc}${ap.freq ? ' — ' + ap.freq : ''}`);
+    });
+  }
+
+  const methods = AS_METHODS.filter(m => asState.methods[m.key]).map(m => m.phrase);
+  if(methods.length) body.push('Troubleshooting: ' + joinAnd(methods) + '.');
+  if(asState.results.trim()) body.push('Results: ' + asState.results.trim());
+  if(asState.ongoing) body.push('Ticket has been placed into ongoing and the contractor has been notified of the trouble area.');
+
+  if(!body.length && !asState.ticket.trim() && !asState.urgency) return null;
+
+  const tkt = asState.ticket.trim();
+  let subject = (tkt ? `Ticket #${tkt} — ` : '') + 'Assistance Needed';
+  if(asState.urgency === 'due') subject = 'DUE TODAY — ' + subject;
+  if(asState.urgency === 'emergency') subject = 'EMERGENCY — ' + subject;
+
+  return { subject, body: body.join('\n') };
+}
+
+function renderAssistance(){
+  const urgWrap = document.getElementById('asUrgencyWrap');
+  urgWrap.innerHTML = '';
+  [['due','⏰ Due today'],['emergency','🚨 Emergency ticket']].forEach(([key,label]) => {
+    const on = asState.urgency === key;
+    const b = document.createElement('button');
+    b.className = 'notechip' + (on ? ' on cc' : '');
+    b.textContent = label;
+    b.onclick = () => { asState.urgency = on ? null : key; render(); };
+    urgWrap.appendChild(b);
+  });
+
+  renderLtRow('asMaterialRow', AS_MATERIALS.map(m => [m.key, m.label]),
+    () => asState.material,
+    (k) => { asState.material = asState.material === k ? null : k; },
+    () => 0);
+  renderLtRow('asLinetypeRow', AS_LINETYPES.map(l => [l.key, l.label]),
+    () => asState.linetype,
+    (k) => { asState.linetype = asState.linetype === k ? null : k; },
+    () => 0);
+
+  const sizeWrap = document.getElementById('asSizes');
+  sizeWrap.innerHTML = '';
+  const grid = document.createElement('div');
+  grid.className = 'chipwrap';
+  allSizes().forEach(size => {
+    const on = !!asState.sizes[size];
+    const b = document.createElement('button');
+    b.className = 'sizechip' + (on ? ' on house' : '');
+    b.textContent = size;
+    b.onclick = () => {
+      if(on) delete asState.sizes[size];
+      else asState.sizes[size] = true;
+      render();
+    };
+    grid.appendChild(b);
+  });
+  sizeWrap.appendChild(grid);
+
+  const apList = document.getElementById('asApList');
+  apList.innerHTML = '';
+  asState.accessPoints.forEach((ap, idx) => {
+    const item = document.createElement('div');
+    item.className = 'cc-log-item';
+    const t = document.createElement('span');
+    t.className = 't';
+    t.textContent = String(idx + 1) + '.';
+    const txt = document.createElement('span');
+    txt.className = 'txt';
+    txt.textContent = ap.loc + (ap.freq ? ' — ' + ap.freq : '');
+    const del = document.createElement('button');
+    del.textContent = '×';
+    del.onclick = () => { asState.accessPoints.splice(idx, 1); render(); };
+    item.appendChild(t);
+    item.appendChild(txt);
+    item.appendChild(del);
+    apList.appendChild(item);
+  });
+  const n = asState.accessPoints.length;
+  document.getElementById('asApCount').textContent = n === 0 ? ''
+    : n < 4 ? `${n} added — supervisors require at least 4 (same material, from opposite directions).`
+    : `${n} added ✓`;
+
+  const methodWrap = document.getElementById('asMethodWrap');
+  methodWrap.innerHTML = '';
+  AS_METHODS.forEach(m => {
+    const on = !!asState.methods[m.key];
+    const b = document.createElement('button');
+    b.className = 'notechip' + (on ? ' on' : '');
+    b.textContent = m.label;
+    b.onclick = () => {
+      if(on) delete asState.methods[m.key];
+      else asState.methods[m.key] = true;
+      render();
+    };
+    methodWrap.appendChild(b);
+  });
+
+  const ongoingWrap = document.getElementById('asOngoingWrap');
+  ongoingWrap.innerHTML = '';
+  const ob = document.createElement('button');
+  ob.className = 'notechip' + (asState.ongoing ? ' on' : '');
+  ob.textContent = 'Ticket in ongoing — contractor notified of trouble area';
+  ob.onclick = () => { asState.ongoing = !asState.ongoing; render(); };
+  ongoingWrap.appendChild(ob);
+
+  const result = buildAssistance();
+  if(result){
+    setEditableText('asSubject', result.subject);
+    setEditableText('asBody', result.body || '(add details in the sections above)');
+  } else {
+    setEditableText('asSubject', 'Fill in the sections above.');
+    setEditableText('asBody', 'Fill in the sections above to build your email.');
+  }
+}
+
+function histTimeLabel(ms){
+  return isSameDay(ms) ? `Copied ${fmtTime(ms)}` : `Copied ${fmtDate(ms)} ${fmtTime(ms)}`;
+}
+
+function renderCopyHistory(){
+  const wrap = document.getElementById('histList');
+  const empty = document.getElementById('histEmpty');
+  wrap.innerHTML = '';
+  empty.style.display = copyHistory.length ? 'none' : 'block';
+  copyHistory.forEach((h, idx) => {
+    const card = document.createElement('button');
+    card.className = 'hist-card';
+
+    const timeDiv = document.createElement('div');
+    timeDiv.className = 'hist-time';
+    timeDiv.textContent = histTimeLabel(h.at);
+    card.appendChild(timeDiv);
+
+    const textDiv = document.createElement('div');
+    textDiv.className = 'qc-text';
+    textDiv.textContent = h.text;
+    card.appendChild(textDiv);
+
+    const hintDiv = document.createElement('div');
+    hintDiv.className = 'qc-hint';
+    hintDiv.textContent = 'Tap to copy';
+    card.appendChild(hintDiv);
+
+    const save = document.createElement('button');
+    const alreadySaved = quickPresets.includes(h.text);
+    save.className = 'hist-save' + (alreadySaved || histSavedFlash === idx ? ' saved' : '');
+    save.textContent = alreadySaved ? 'In presets ✓' : (histSavedFlash === idx ? 'Saved ✓' : '+ Preset');
+    save.onclick = async (ev) => {
+      ev.stopPropagation();
+      if(quickPresets.includes(h.text)) return;
+      quickPresets.push(h.text);
+      await savePresets();
+      histSavedFlash = idx;
+      setTimeout(() => { histSavedFlash = null; render(); }, 1600);
+      render();
+    };
+    card.appendChild(save);
+
+    card.onclick = async () => {
+      const ok = await copyTextRobust(h.text);
+      const hint = card.querySelector('.qc-hint');
+      if(ok){
+        card.classList.add('copied');
+        hint.classList.add('copied');
+        hint.textContent = 'Copied ✓';
+      } else {
+        hint.textContent = 'Could not copy — long-press to select';
+      }
+      setTimeout(() => {
+        card.classList.remove('copied');
+        hint.classList.remove('copied');
+        hint.textContent = 'Tap to copy';
+      }, 1600);
+    };
+    wrap.appendChild(card);
+  });
+}
+
 function requestDeletePreset(idx){
   clearTimeout(pendingDeleteTimer);
   if(pendingDeleteIndex === idx){
@@ -1256,6 +1989,7 @@ function renderQuickCopyList(){
       const ok = await copyTextRobust(text);
       const hint = card.querySelector('.qc-hint');
       if(ok){
+        recordCopy(text);
         card.classList.add('copied');
         hint.classList.add('copied');
         hint.textContent = 'Copied ✓';
@@ -1293,7 +2027,10 @@ function renderHelp(){
     titleEl.textContent = 'Help';
     body.innerHTML = `
       <button class="help-menu-item" data-help="notebuilder"><span>📋 Note Builder</span><span class="arrow">›</span></button>
+      <button class="help-menu-item" data-help="cantcomplete"><span>🚫 No Access</span><span class="arrow">›</span></button>
+      <button class="help-menu-item" data-help="assistance"><span>🆘 Assistance Needed</span><span class="arrow">›</span></button>
       <button class="help-menu-item" data-help="quickcopy"><span>⚡ Quick Copy</span><span class="arrow">›</span></button>
+      <button class="help-menu-item" data-help="recentcopies"><span>🕐 Recent Copies</span><span class="arrow">›</span></button>
       <button class="help-menu-item" data-help="projecthouses"><span>📍 Project Houses</span><span class="arrow">›</span></button>
       <button class="help-menu-item" data-help="install-brand"><span>📲 Install as an App</span><span class="arrow">›</span></button>
       <button class="help-menu-item" data-help="whatsnew"><span>🆕 What's New</span><span class="arrow">›</span></button>
@@ -1312,7 +2049,7 @@ function renderHelp(){
     markVersionSeen();
     updateHelpBadge();
   } else if(HELP_CONTENT[helpView]){
-    const titles = { notebuilder:'Note Builder', quickcopy:'Quick Copy', projecthouses:'Project Houses' };
+    const titles = { notebuilder:'Note Builder', cantcomplete:'No Access', assistance:'Assistance Needed', quickcopy:'Quick Copy', recentcopies:'Recent Copies', projecthouses:'Project Houses' };
     titleEl.textContent = titles[helpView];
     body.innerHTML = HELP_CONTENT[helpView];
   } else if(helpView==='install-brand'){
@@ -1366,14 +2103,20 @@ function render(){
   renderNotes();
   renderPreview();
   renderQuickCopyList();
+  renderCopyHistory();
+  renderCantComplete();
+  renderAssistance();
   renderStreetAccordion();
   renderSelectedHouses();
 
   document.getElementById('builderView').style.display = currentTab==='builder' ? '' : 'none';
+  document.getElementById('cantCompleteView').style.display = currentTab==='cantcomplete' ? '' : 'none';
+  document.getElementById('assistanceView').style.display = currentTab==='assistance' ? '' : 'none';
   document.getElementById('quickCopyView').style.display = currentTab==='quickcopy' ? '' : 'none';
+  document.getElementById('recentCopiesView').style.display = currentTab==='recentcopies' ? '' : 'none';
   document.getElementById('projectHousesView').style.display = currentTab==='projecthouses' ? '' : 'none';
   document.getElementById('footerBar').style.display = currentTab==='builder' ? '' : 'none';
-  ['preview','phPreview','phMergedPreview'].forEach(id=>{
+  ['preview','phPreview','phMergedPreview','ccPreview','asSubject','asBody','asResults','asIssue'].forEach(id=>{
     autoResizeTextarea(document.getElementById(id));
   });
   if(currentTab !== 'quickcopy') presetsLocked = true;
@@ -1381,10 +2124,13 @@ function render(){
   lockBtn.style.display = currentTab==='quickcopy' ? '' : 'none';
   lockBtn.textContent = presetsLocked ? '🔒' : '🔓';
   lockBtn.classList.toggle('unlocked', !presetsLocked);
-  const titles = { builder:'Note Builder', quickcopy:'Quick Copy', projecthouses:'Project Houses' };
+  const titles = { builder:'Note Builder', cantcomplete:'No Access', assistance:'Assistance Needed', quickcopy:'Quick Copy', recentcopies:'Recent Copies', projecthouses:'Project Houses' };
   const subs = {
     builder:'TAP SIZES → MULTI-SELECT → COPY',
+    cantcomplete:'LOG ATTEMPTS + BUILD YOUR NOTE',
+    assistance:'BUILD YOUR TROUBLE-TICKET EMAIL',
     quickcopy:'TAP A PRESET TO COPY',
+    recentcopies:'LAST 10 COPIED NOTES',
     projecthouses:'FIND & TAP NEARBY HOUSES'
   };
   document.getElementById('pageTitle').textContent = titles[currentTab];
@@ -1394,6 +2140,8 @@ function render(){
   });
   syncFooterPadding();
   saveBuilderState();
+  saveCcState();
+  saveAsState();
   updateHelpBadge();
 }
 
@@ -1474,6 +2222,7 @@ document.getElementById('phCopyBtn').onclick = async ()=>{
   const btn = document.getElementById('phCopyBtn');
   const ok = await copyTextRobust(text);
   if(ok){
+    recordCopy(text);
     btn.textContent = 'Copied ✓';
     btn.classList.add('done');
   } else {
@@ -1490,6 +2239,7 @@ document.getElementById('phMergedCopyBtn').onclick = async ()=>{
   const btn = document.getElementById('phMergedCopyBtn');
   const ok = await copyTextRobust(text);
   if(ok){
+    recordCopy(text);
     btn.textContent = 'Copied ✓';
     btn.classList.add('done');
   } else {
@@ -1512,6 +2262,7 @@ document.getElementById('copyBtn').onclick = async ()=>{
   const btn = document.getElementById('copyBtn');
   const ok = await copyTextRobust(text);
   if(ok){
+    recordCopy(text);
     btn.textContent = 'Copied ✓';
     btn.classList.add('done');
     setTimeout(()=>{ btn.textContent='Copy note'; btn.classList.remove('done'); }, 1600);
@@ -1534,8 +2285,94 @@ document.getElementById('clearBtn').onclick = ()=>{
   render();
 };
 
+document.getElementById('ccUpdateTimeBtn').onclick = ()=>{
+  ccState.stamp = Date.now();
+  render();
+};
+
+document.getElementById('ccCopyBtn').onclick = async ()=>{
+  const preview = document.getElementById('ccPreview');
+  const text = preview.value;
+  const btn = document.getElementById('ccCopyBtn');
+  const ok = await copyTextRobust(text);
+  if(ok){
+    recordCopy(text);
+    btn.textContent = 'Copied ✓';
+    btn.classList.add('done');
+  } else {
+    preview.focus();
+    preview.select();
+    btn.textContent = 'Long-press to copy';
+  }
+  setTimeout(()=>{ btn.textContent='Copy note'; btn.classList.remove('done'); }, 1600);
+};
+
+document.getElementById('ccClearBtn').onclick = ()=>{
+  ccState = { reasons:{}, attempts:[], next:null, stamp:null, reattemptAt:null };
+  render();
+};
+
+document.getElementById('asApAddBtn').onclick = ()=>{
+  const locEl = document.getElementById('asApLoc');
+  const freqEl = document.getElementById('asApFreq');
+  const loc = locEl.value.trim();
+  const freq = freqEl.value.trim();
+  if(!loc && !freq) return;
+  asState.accessPoints.push({ loc: loc || '(no location given)', freq });
+  locEl.value = '';
+  freqEl.value = '';
+  render();
+};
+
+['asTicket','asAddress','asIssue','asTransitions','asResults'].forEach(id=>{
+  const stateKey = { asTicket:'ticket', asAddress:'address', asIssue:'issue', asTransitions:'transitions', asResults:'results' }[id];
+  const el = document.getElementById(id);
+  el.addEventListener('input', ()=>{
+    asState[stateKey] = el.value;
+    if(id==='asResults' || id==='asIssue') autoResizeTextarea(el);
+    const result = buildAssistance();
+    if(result){
+      setEditableText('asSubject', result.subject);
+      setEditableText('asBody', result.body || '(add details in the sections above)');
+    } else {
+      setEditableText('asSubject', 'Fill in the sections above.');
+      setEditableText('asBody', 'Fill in the sections above to build your email.');
+    }
+    saveAsState();
+  });
+});
+
+function wireAsCopyBtn(btnId, previewId, label){
+  document.getElementById(btnId).onclick = async ()=>{
+    const preview = document.getElementById(previewId);
+    const text = preview.value;
+    const btn = document.getElementById(btnId);
+    const ok = await copyTextRobust(text);
+    if(ok){
+      recordCopy(text);
+      btn.textContent = 'Copied ✓';
+      btn.classList.add('done');
+    } else {
+      preview.focus();
+      preview.select();
+      btn.textContent = 'Long-press to copy';
+    }
+    setTimeout(()=>{ btn.textContent=label; btn.classList.remove('done'); }, 1600);
+  };
+}
+wireAsCopyBtn('asCopySubjectBtn', 'asSubject', 'Copy subject');
+wireAsCopyBtn('asCopyBodyBtn', 'asBody', 'Copy body');
+
+document.getElementById('asClearBtn').onclick = ()=>{
+  asState = { ticket:'', urgency:null, address:'', issue:'', material:null, linetype:null, sizes:{}, transitions:'', accessPoints:[], methods:{}, results:'', ongoing:false };
+  ['asTicket','asAddress','asIssue','asTransitions','asResults','asApLoc','asApFreq'].forEach(id=>{
+    document.getElementById(id).value = '';
+  });
+  render();
+};
+
 const footerEl = document.getElementById('footerBar');
-['preview','phPreview','phMergedPreview'].forEach(id=>{
+['preview','phPreview','phMergedPreview','ccPreview'].forEach(id=>{
   const el = document.getElementById(id);
   el.addEventListener('input', ()=>{
     autoResizeTextarea(el);
@@ -1551,7 +2388,15 @@ function syncFooterPadding(){
   await loadPresets();
   await loadSelectedHouses();
   await loadBuilderState();
+  await loadCcState();
+  await loadAsState();
+  await loadCopyHistory();
   await loadSeenVersion();
+  document.getElementById('asTicket').value = asState.ticket;
+  document.getElementById('asAddress').value = asState.address;
+  document.getElementById('asIssue').value = asState.issue;
+  document.getElementById('asTransitions').value = asState.transitions;
+  document.getElementById('asResults').value = asState.results;
   render();
   if('ResizeObserver' in window){
     new ResizeObserver(syncFooterPadding).observe(footerEl);
